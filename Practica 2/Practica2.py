@@ -119,7 +119,7 @@ def calcula_porcentaje(X, Y, theta):
 
     return (aciertos / n) * 100
     
-## Ejercicio 1: regresión lineal
+## Ejercicio 1: regresión logística (frontera divisible por una recta)
 def Ejercicio1():
     #Leemos los valores de la matriz de datos
     valores = carga_csv("ex2data1.csv")
@@ -146,18 +146,18 @@ def Ejercicio1():
     pinta_frontera_recta(X, Y, theta_opt)
 
     # Guardamos la gráfica y cerramos
-    plt.savefig("Ejercicio1.pdf")
+    plt.savefig("RegresionLogistica.pdf")
     plt.close()
 
 ## Ejercicio 2: regresión logística y regularización (recibe el valor de lambda)
-def Ejercicio2(lamda):
+def Ejercicio2(lamda, grado):
     #Leemos los valores de la matriz de datos
     valores = carga_csv("ex2data2.csv")
     X = valores[:, :-1]
     Y = valores[:, -1]
 
     # Creamos el polinomio X de grado 6 a partir de combinaciones de x1 y x2
-    poly = PolynomialFeatures(6)
+    poly = PolynomialFeatures(grado)
     polyX = poly.fit_transform(X)
     theta = np.zeros((polyX.shape[1]))
 
@@ -169,15 +169,17 @@ def Ejercicio2(lamda):
     porc = round(calcula_porcentaje(polyX, Y, theta_opt), 3)
 
     # Pintamos los datos y la frontera de decisión 
-    title = "Lambda = " + str(lamda) + "\n" + str(porc) + "% de ejemplos clasificados correctamente"
+    title = "Grado " + str(grado) + "Lambda = " + str(lamda) + "\n" + str(porc) + "% de ejemplos clasificados correctamente"
     visualizacion_datos(X, Y, "Microchip Test 1", "Microchip Test 2", title)
     plot_decisionboundary(X, Y, theta_opt, poly)
 
     # Guardamos la gráfica y cerramos
-    plt.savefig("Ejercicio2_lambda" + str(lamda) + ".pdf")
+    plt.savefig("LogisticaRegularizada_grado" + str(grado) + "_lambda" + str(lamda) + ".pdf")
     plt.close()
 
 Ejercicio1()
-Ejercicio2(0.1)
-Ejercicio2(1)
-Ejercicio2(10)
+Ejercicio2(0.1, 6)
+Ejercicio2(1, 10)
+Ejercicio2(1, 6)
+Ejercicio2(1, 2)
+Ejercicio2(10, 6)

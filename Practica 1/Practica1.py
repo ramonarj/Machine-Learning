@@ -87,14 +87,12 @@ def drawLinearRegression(X, Y, f):
     plt.figure()
     plt.plot(X, Y, 'x',color="red")
     plt.plot(X, f, color="blue")
-    plt.title("Practica 1")
+    plt.title("Regresión lineal con descenso de gradiente")
     plt.xlabel("Población de la ciudad en 10000s")
     plt.ylabel("Ingresos en $10000s")
-    plt.legend()
-    plt.savefig('linearRegression.png')
-    plt.show()
 
-    #Dibujamos la gráfica con la recta de regresión
+
+#Dibujamos la superficie de coste
 def drawCostSurface(Theta0, Theta1, Coste):
     #Dibujamos la gráfica de coste con las thetas
     fig = plt.figure()
@@ -106,26 +104,25 @@ def drawCostSurface(Theta0, Theta1, Coste):
     ax.set_ylabel("θ1")
     ax.set_zlabel("J(θ)")
     fig.colorbar(surf, shrink = 0.5, aspect = 5)
-    plt.savefig('costSurface.png')
-    plt.show()
+    ax.view_init(elev=10, azim=-135) #Para rotar la figura en el eje Z 
 
-#Dibujamos la gráfica con la recta de regresión
+def drawContour(Theta0, Theta1, Coste):
+    plt.figure()
+    plt.contour(Theta0, Theta1, Coste, np.logspace(-2, 3, 20))
+
+
+#Dibujamos la gráfica con la tasa de aprendizaje
 def drawLearningRate(alphas, costes):
     plt.figure()
     plt.plot(alphas, costes, color="yellow")
     plt.title("Practica 1.2")
     plt.xlabel("Tasa de aprendizaje")
     plt.ylabel("Coste")
-    plt.legend()
-    plt.savefig('learningRate.png')
-    plt.show()
 
     #Dibujamos la gráfica con la recta de regresión
 def drawCosts(alpha, costes, kolor):
     size = costes.shape[0]
     X = np.linspace(0, size, size)
-
-
     plt.plot(X, costes, color=kolor)
     
 
@@ -160,13 +157,48 @@ def normalizaRespecto(X, mu, sigma):
     X = (X - mu) / sigma
     return X
 
-def main():
+# Regresión lineal con una variable mediante descenso de gradiente
+def Ejercicio1(alpha, num_iter):
     #1.Importamos los datos a una matriz y rellenamos con 1's la primera columna para el p.escalar 
+    valores = carga_csv("ex1data1.csv")
+    X = valores[:, :-1]
+    Y = valores[:, -1]
+
+    m = X.shape[0]
+    unos = np.ones((m, 1))
+
+    # Hacemos el descenso de gradiente
+    theta, costes = descenso_gradiente(X, Y, alpha, num_iter)
+    f = h(np.hstack((unos, X)), theta)
+
+    ## Gráficas:
+    # 1. Gráfica de la regresión lineal 
+    drawLinearRegression(X, Y, f)
+    plt.savefig('linearRegression.pdf')
+    plt.close()
+
+    # 2. Gráfica para observar la relación entre el vector de pesos y el coste de la regresión
+    Theta0, Theta1, coste = make_data([-10, 10], [-1, 4], X, Y)
+    drawCostSurface(Theta0, Theta1, coste)
+    plt.savefig('costSurface.pdf')
+    plt.close()
+
+    # 3. 
+    drawContour(Theta0, Theta1, coste)
+    plt.savefig('costContour.pdf')
+    plt.close()
+
+# Regresión lineal multivariable mediante normalización
+def Ejercicio2():
+    #1.Importamos los datos a una matriz
     valores = carga_csv("ex1data2.csv")
+    # Valores para los alphas y los colores que usaremos
     alphas = [0.3, 0.1, 0.03, 0.01, 0.005]
     colors = ["black", "red", "blue", "green", "purple"]
     X = valores[:, :-1]
     Y = valores[:, -1]
+
+    # Ejemplo con el que trabajaremos
     ejemplo = np.array([1650, 3])
 
 
@@ -204,5 +236,5 @@ def main():
     #Theta0, Theta1, coste = make_data([-10, 10], [-1, 4], X, Y)
     #drawCostSurface(Theta0, Theta1, coste)
     '''
-
-main()
+Ejercicio1(0.01, 1500)
+#Ejercicio2()

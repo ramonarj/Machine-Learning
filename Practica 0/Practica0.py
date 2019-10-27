@@ -1,5 +1,5 @@
-#Celia Castaños Bornaechea
-#Ramón Arjona Quiñones
+## Celia Castaños Bornaechea
+## Ramón Arjona Quiñones
 
 import scipy.integrate 
 import math

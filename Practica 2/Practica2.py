@@ -1,3 +1,6 @@
+## Celia Castaños Bornaechea
+## Ramón Arjona Quiñones
+
 import numpy as np
 from pandas.io.parsers import read_csv
 import matplotlib.pyplot as plt

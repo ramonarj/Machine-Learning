@@ -1,5 +1,5 @@
-## Celia Castaños Bornaechea
 ## Ramón Arjona Quiñones
+## Celia Castaños Bornaechea
 
 import numpy as np
 from pandas.io.parsers import read_csv
@@ -51,23 +51,28 @@ def h(x, theta):
 # Implementa la regresión logística multiclase
 def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
 
-    # Vector de y para la iteración concreta
-    iterY = np.copy(y)
-    iterY = np.where (iterY == 10, 1, 0)
+    #Creamos la matrix de thetas
+    thetas = np.zeros((num_etiquetas, X.shape[1] + 1))
 
-    #Inicializamos theta y ponemos la columna de 1's a las X
-    theta = np.zeros((X.shape[1] + 1))
-    m = X.shape[0]
-    unos = np.ones((m, 1))
-    unosX = np.hstack((unos, X))
+    #Clasificador para cada una de las etiquetas
+    for i in range (num_etiquetas):
+        # Vector de 'y' para la iteración concreta
+        iterY = np.copy(y)
+        iterY = np.where (iterY == i, 1, 0)
 
-    # Calculamos el vector de pesos óptimo igual que en el ejercicio 2
-    result = opt.fmin_tnc(func = regularizedCost, x0=theta, fprime=regularizedGradient, args=(reg, unosX, iterY.ravel()))
-    theta_opt = result[0]
+        #Inicializamos theta y ponemos la columna de 1's a las X
+        m = X.shape[0]
+        unos = np.ones((m, 1))
+        unosX = np.hstack((unos, X))
 
+        # Calculamos el vector de pesos óptimo igual que en el ejercicio 2
+        result = opt.fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, unosX, iterY.ravel()))
+        thetas[i] = result[0]
+
+    return thetas
 
 ## Regresión logística multiclase
-def Ejercicio3(lamda):
+def Ejercicio1(lamda):
 
     # Leemos los datos de las matrices (en formato .mat) con 5k ejemplos de entrenamiento
     # Cada ejemplo es una imagen de 20x20 pixeles, cada uno es un número real en escala de grises
@@ -81,8 +86,17 @@ def Ejercicio3(lamda):
     plt.axis('off')
     plt.show()
 
-    # Resolvemos el one vs All
-    oneVsAll(X, y, 10, lamda)
-    
+    # Resolvemos el one vs All (deberia estar bien)
+    thetas = oneVsAll(X, y, 10, lamda)
 
-Ejercicio3(0.1)
+
+    
+##Redes neuronales
+def Ejercicio2():
+    weights = loadmat ( "ex3weights.mat" )
+    theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
+    # Theta1 es de dimensión 25 x 401
+    # Theta2 es de dimensión 10 x 26
+
+
+Ejercicio1(0.1)

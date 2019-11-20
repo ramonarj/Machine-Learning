@@ -47,26 +47,35 @@ def regularizedGradient(theta, lamda, X, Y):
 def h(x, theta):
     return np.dot(x, theta[np.newaxis].T)
 
+## Calcula el porcentaje de ejemplos de entrenamiento que han sido clasificados correctamente
+def calcula_porcentaje(reales, predichos):
+    # Vemos cuántos de ellos coinciden con Y y devolvemos el porcentaje sobre el total de ejemplos
+    coinciden = np.where ( reales == predichos )
+
+    #ESTÁ MAL
+    aciertos = len(coinciden[0])
+
+
+    return (aciertos / len(reales)) * 100
+
 
 # Implementa la regresión logística multiclase
 def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
 
-    #Creamos la matrix de thetas
-    thetas = np.zeros((num_etiquetas, X.shape[1] + 1))
+    #Creamos la matriz de thetas
+    thetas = np.zeros((num_etiquetas, X.shape[1]))
 
     #Clasificador para cada una de las etiquetas
     for i in range (num_etiquetas):
         # Vector de 'y' para la iteración concreta
         iterY = np.copy(y)
-        iterY = np.where (iterY == i, 1, 0)
-
-        #Inicializamos theta y ponemos la columna de 1's a las X
-        m = X.shape[0]
-        unos = np.ones((m, 1))
-        unosX = np.hstack((unos, X))
+        if(i == 0):
+            iterY = np.where (iterY == 10, 1, 0)
+        else:
+            iterY = np.where (iterY == i, 1, 0)
 
         # Calculamos el vector de pesos óptimo igual que en el ejercicio 2
-        result = opt.fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, unosX, iterY.ravel()))
+        result = opt.fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()))
         thetas[i] = result[0]
 
     return thetas
@@ -79,15 +88,37 @@ def Ejercicio1(lamda):
     data = loadmat('ex3data1.mat') # Devuelve un diccionario
     X = data['X'] # Cada ejemplo de entrenamiento en una fila (5000x400)
     y = data['y'] # 1 - 10 (el 10 es 0)
+    num_etiquetas = 10
 
     # Cogemos 10 muestras aleatorias y las pintamos
-    sample = np.random.choice(X.shape[0], 10)
-    plt.imshow(X[sample, :].reshape(-1, 20).T)
-    plt.axis('off')
-    plt.show()
+    #sample = np.random.choice(X.shape[0], 10)
+    #plt.imshow(X[sample, :].reshape(-1, 20).T)
+    #plt.axis('off')
+    #plt.show()
 
-    # Resolvemos el one vs All (deberia estar bien)
-    thetas = oneVsAll(X, y, 10, lamda)
+    #Inicializamos theta y ponemos la columna de 1's a las X
+    m = X.shape[0]
+    unos = np.ones((m, 1))
+    unosX = np.hstack((unos, X))
+
+    # Resolvemos el one vs All (debería estar bien)
+    thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
+
+    #Creamos la matriz
+    affinities = np.zeros((X.shape[0], num_etiquetas))
+    results = np.zeros(X.shape[0])
+
+    #Calculamos las afinidades
+    for i in range (X.shape[0]):
+        for j in range (num_etiquetas):
+            affinities[i][j] = sigmoid(np.matmul(unosX[i][np.newaxis, :], thetas[j][np.newaxis].T))
+            #print("Clasificador del ", j)
+            #print(affinities[i])
+        results[i] = np.argmax(affinities[i])
+
+
+    print(calcula_porcentaje(y, results))
+ 
 
 
     

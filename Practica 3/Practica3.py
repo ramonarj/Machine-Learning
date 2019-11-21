@@ -49,12 +49,11 @@ def h(x, theta):
 
 ## Calcula el porcentaje de ejemplos de entrenamiento que han sido clasificados correctamente
 def calcula_porcentaje(reales, predichos):
+    predichos = predichos[np.newaxis].T
+
     # Vemos cuántos de ellos coinciden con Y y devolvemos el porcentaje sobre el total de ejemplos
-    coinciden = np.where ( reales == predichos )
-
-    #ESTÁ MAL
-    aciertos = len(coinciden[0])
-
+    coinciden = ( reales == predichos )
+    aciertos = np.sum(coinciden)
 
     return (aciertos / len(reales)) * 100
 
@@ -79,6 +78,16 @@ def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
         thetas[i] = result[0]
 
     return thetas
+
+
+def forward_propagate(X, theta1, theta2):
+    m = X.shape[0]
+    a1 = np.hstack([np.ones([m, 1]), X])
+    z2 = np.dot(a1, theta1.T)
+    a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
+    z3 = np.dot(a2, theta2.T)
+    h = sigmoid(z3)
+    return a1, z2, a2, z3, h
 
 ## Regresión logística multiclase
 def Ejercicio1(lamda):
@@ -105,20 +114,19 @@ def Ejercicio1(lamda):
     thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
 
     #Creamos la matriz
-    affinities = np.zeros((X.shape[0], num_etiquetas))
+    affinities = np.zeros((num_etiquetas))
     results = np.zeros(X.shape[0])
 
     #Calculamos las afinidades
     for i in range (X.shape[0]):
         for j in range (num_etiquetas):
-            affinities[i][j] = sigmoid(np.matmul(unosX[i][np.newaxis, :], thetas[j][np.newaxis].T))
-            #print("Clasificador del ", j)
-            #print(affinities[i])
-        results[i] = np.argmax(affinities[i])
+            affinities[j] = sigmoid(np.matmul(unosX[i][np.newaxis, :], thetas[j][np.newaxis].T))
+        results[i] = np.argmax(affinities)
+        if(results[i] == 0):
+            results[i] = 10
 
 
-    print(calcula_porcentaje(y, results))
- 
+    print("Ha clasficado un ", calcula_porcentaje(y, results), "% de los ejemplos bien")
 
 
     

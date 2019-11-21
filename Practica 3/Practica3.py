@@ -87,7 +87,7 @@ def forward_propagate(X, theta1, theta2):
     a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
     z3 = np.dot(a2, theta2.T)
     h = sigmoid(z3)
-    return a1, z2, a2, z3, h
+    return h
 
 ## Regresión logística multiclase
 def Ejercicio1(lamda):
@@ -115,10 +115,10 @@ def Ejercicio1(lamda):
 
     #Creamos la matriz
     affinities = np.zeros((num_etiquetas))
-    results = np.zeros(X.shape[0])
+    results = np.zeros(m)
 
     #Calculamos las afinidades
-    for i in range (X.shape[0]):
+    for i in range (m):
         for j in range (num_etiquetas):
             affinities[j] = sigmoid(np.matmul(unosX[i][np.newaxis, :], thetas[j][np.newaxis].T))
         results[i] = np.argmax(affinities)
@@ -132,10 +132,35 @@ def Ejercicio1(lamda):
     
 ##Redes neuronales
 def Ejercicio2():
+    data = loadmat('ex3data1.mat') # Devuelve un diccionario
+    X = data['X'] # (5000x400)
+    y = data['y'] # 1 - 10 (el 10 es 0)
+    num_etiquetas = 10
+
+    m = X.shape[0]
+
     weights = loadmat ( "ex3weights.mat" )
     theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
     # Theta1 es de dimensión 25 x 401
     # Theta2 es de dimensión 10 x 26
 
+    h = forward_propagate(X, theta1, theta2) # h es de 5000x10
 
-Ejercicio1(0.1)
+    #Creamos la matriz
+    results = np.zeros(m)
+
+    #Calculamos las afinidades
+    for i in range (m):
+        results[i] = np.argmax(h[i])
+        if(results[i] == 0):
+            results[i] = 10
+
+
+    print("Ha clasficado un ", calcula_porcentaje(y, results), "% de los ejemplos bien")
+
+    
+    
+
+
+#Ejercicio1(0.1)
+Ejercicio2()

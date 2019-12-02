@@ -2,65 +2,77 @@
 ## Celia Castaños Bornaechea
 
 import numpy as np
-from pandas.io.parsers import read_csv
 import matplotlib.pyplot as plt
-import scipy.integrate 
-import scipy.optimize as opt
+from scipy.optimize import fmin_tnc
 from sklearn.preprocessing import PolynomialFeatures 
 from scipy.io import loadmat
 
-## Calcula el sigmoide del número z
-def sigmoid(z): #Ej. 1.2
+
+def h(x, theta):
+    '''
+    Calcula la predicción sobre x para un cierto theta
+    '''
+    return np.dot(x, theta[np.newaxis].T)
+
+    
+def hMatrix(x, theta):
+    '''
+    Calcula la predicción sobre x para una cierta matriz de thetas 
+    '''
+    return np.dot(x, theta.T)
+
+def sigmoid(z): 
+    '''
+    Calcula el sigmoide del número z
+    '''
     s = 1 / (1 + np.exp(-z))
     return s
 
-## Calcula el coste sobre los ejemplos de entrenamiento para un cierto valor de theta
-def cost(theta, X, Y):
+
+def regularizedCost(theta, lamda: float, X, Y):
+    '''
+    Calcula el coste para los ejemplos, pesos y término de regularización dados
+    '''
+    #Variables auxiliares
+    m = X.shape[0]
     H = sigmoid(np.matmul(X, theta))
-    cost = (- 1 / (len(X))) * (np.dot(Y, np.log(H)) + np.dot((1 - Y), np.log(1 - H)))
-    return cost
 
-## Calcula el coste de forma regularizada para un cierto lambda
-def regularizedCost(theta, lamda, X, Y):
-    regCost = cost(theta, X, Y)
+    # Coste cuando Y = 1
+    costeUno = np.dot(Y, np.log(H))
+    # Coste cuando Y = 0
+    costeCero = np.dot((1 - Y), np.log(1 - H))
+    # Término de regularización (sumado al coste original)
+    regTerm = lamda / (2 * m) * np.sum(theta**2) 
 
-    #Añadimos el sumatorio de thetas al cuadrado al valor del coste normal
-    regCost = regCost + (lamda / 2*(len(X))) * np.sum(theta**2) 
-    return regCost
+    return -1 / m * (costeUno + costeCero) + regTerm
 
-## Calcula el gradiente sobre los ejemplos de entrenamiento para un cierto valor de theta
-def gradiente(theta, X, Y):
+def regularizedGradient(theta, lamda: float, X, Y):
+    '''
+    Calcula el gradiente con los ejemplos, pesos y término de regularización dados
+    '''
+    #Variables auxiliares
+    m = X.shape[0]
     H = sigmoid(np.matmul(X, theta))
-    grad = (1/ len(Y)) * np.matmul(X.T, H-Y)
-    return grad
 
-## Calcula el gradiente de forma regularizada para un cierto lambda
-def regularizedGradient(theta, lamda, X, Y):
-    regGrad = gradiente(theta, X, Y)
-    aux = np.copy(theta)
-    aux[0] = 0
-    #Añadimos el sumatorio de thetas al valor del gradiente normal
-    regGrad = regGrad + (lamda / len(Y) * aux)
-    return regGrad
+    # Cálculo del gradiente
+    grad = (1/ m) * np.matmul(X.T, H-Y)
 
-## Calcula la predicción sobre x para un cierto theta
-def h(x, theta):
-    return np.dot(x, theta[np.newaxis].T)
+    # No queremos usar la primera componente de theta (nos la guardamos)
+    aux = theta[0]
+    theta[0] = 0
 
-## Calcula el porcentaje de ejemplos de entrenamiento que han sido clasificados correctamente
-def calcula_porcentaje(reales, predichos):
-    predichos = predichos[np.newaxis].T
+    # Término de regularización
+    regTerm = lamda / m * theta
 
-    # Vemos cuántos de ellos coinciden con Y y devolvemos el porcentaje sobre el total de ejemplos
-    coinciden = ( reales == predichos )
-    aciertos = np.sum(coinciden)
+    #Devolvemos su valor a theta
+    theta[0] = aux
 
-    return (aciertos / len(reales)) * 100
+    return grad + regTerm
 
-
-# Implementa la regresión logística multiclase
-def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
-
+def oneVsAll(X: np.array, y: np.array, num_etiquetas: int, reg: float):
+    '''
+    Implementa la regresión lineal multiclase (reg = término de regularización)
+    ''' 
     #Creamos la matriz de thetas
     thetas = np.zeros((num_etiquetas, X.shape[1]))
 
@@ -73,12 +85,39 @@ def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
         else:
             iterY = np.where (iterY == i, 1, 0)
 
-        # Calculamos el vector de pesos óptimo igual que en el ejercicio 2
-        result = opt.fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()))
-        thetas[i] = result[0]
+        # Calculamos el vector de pesos óptimo para ese clasificador
+        thetas[i] = fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()))[0]
 
     return thetas
 
+def calcula_porcentaje(X, Y, thetas, digitsNo: int):
+    '''
+    Calcula el porcentaje de aciertos del entrenador
+    '''
+    # Variables auxiliares
+    m = X.shape[0]
+    num_etiquetas = thetas.shape[0]
+
+    # Creamos la matriz
+    affinities = np.zeros((num_etiquetas))
+    results = np.zeros(m)
+
+    # Recorremos todos los ejemplos de entrenamiento...
+    for i in range (m):
+        # Afinidad del ejemplo con cada clasificador
+        affinities = sigmoid(hMatrix(X[i], thetas))
+        # Nos quedamos con el clasificador que de el valor más alto
+        results[i] = np.argmax(affinities)
+
+    results = results[np.newaxis].T
+
+    # Vemos cuántos de ellos coinciden con Y 
+    Y = np.where (Y == 10, 0, Y) # Para que los '10' se cambien a '0'
+    coinciden = ( Y == results )
+    aciertos = np.sum(coinciden)
+
+    # Porcentaje sobre el total de ejemplos redondeado
+    return round((aciertos / m) * 100, digitsNo)
 
 def forward_propagate(X, theta1, theta2):
     m = X.shape[0]
@@ -89,9 +128,10 @@ def forward_propagate(X, theta1, theta2):
     h = sigmoid(z3)
     return h
 
-## Regresión logística multiclase
 def Ejercicio1(lamda):
-
+    '''
+    Regresión logística OneVsAll
+    '''
     # Leemos los datos de las matrices (en formato .mat) con 5k ejemplos de entrenamiento
     # Cada ejemplo es una imagen de 20x20 pixeles, cada uno es un número real en escala de grises
     data = loadmat('ex3data1.mat') # Devuelve un diccionario
@@ -113,31 +153,21 @@ def Ejercicio1(lamda):
     # Resolvemos el one vs All (debería estar bien)
     thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
 
-    #Creamos la matriz
-    affinities = np.zeros((num_etiquetas))
-    results = np.zeros(m)
-
-    #Calculamos las afinidades
-    for i in range (m):
-        for j in range (num_etiquetas):
-            affinities[j] = sigmoid(np.matmul(unosX[i][np.newaxis, :], thetas[j][np.newaxis].T))
-        results[i] = np.argmax(affinities)
-        if(results[i] == 0):
-            results[i] = 10
+    print("El entrenador tiene una precisión del ", calcula_porcentaje(unosX, y, thetas, 4), "%")
 
 
-    print("Ha clasficado un ", calcula_porcentaje(y, results), "% de los ejemplos bien")
-
-
-    
-##Redes neuronales
 def Ejercicio2():
+    '''
+    Redes neuronales con unos pesos ya dados
+    '''
     data = loadmat('ex3data1.mat') # Devuelve un diccionario
     X = data['X'] # (5000x400)
     y = data['y'] # 1 - 10 (el 10 es 0)
     num_etiquetas = 10
 
     m = X.shape[0]
+    unos = np.ones((m, 1))
+    unosX = np.hstack((unos, X))
 
     weights = loadmat ( "ex3weights.mat" )
     theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
@@ -146,21 +176,8 @@ def Ejercicio2():
 
     h = forward_propagate(X, theta1, theta2) # h es de 5000x10
 
-    #Creamos la matriz
-    results = np.zeros(m)
-
-    #Calculamos las afinidades
-    for i in range (m):
-        results[i] = np.argmax(h[i])
-        if(results[i] == 0):
-            results[i] = 10
+    #print("El entrenador tiene una precisión del ", calcula_porcentaje(unosX, y, h, 4), "%")
 
 
-    print("Ha clasficado un ", calcula_porcentaje(y, results), "% de los ejemplos bien")
-
-    
-    
-
-
-#Ejercicio1(0.1)
-Ejercicio2()
+Ejercicio1(0.1)
+#Ejercicio2()

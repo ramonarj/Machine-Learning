@@ -1,4 +1,4 @@
-## Celia Castaños Bornaechea
+rint("El entrenador tiene una precisión del ", calcula_porcentaje(y, results), "%")## Celia Castaños Bornaechea
 ## Ramón Arjona Quiñones
 
 import numpy as np

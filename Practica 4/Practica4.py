@@ -1,99 +1,99 @@
-## Celia Castaños Bornaechea
 ## Ramón Arjona Quiñones
+## Celia Castaños Bornaechea
 
+import sys
 import numpy as np
-from pandas.io.parsers import read_csv
 import matplotlib.pyplot as plt
-import scipy.integrate 
-import scipy.optimize as opt
+from scipy.optimize import fmin_tnc
 from sklearn.preprocessing import PolynomialFeatures 
 from scipy.io import loadmat
+from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient
+from displayData import displayData
 
-## Calcula el sigmoide del número z
-def sigmoid(z): #Ej. 1.2
-    s = 1 / (1 + np.exp(-z))
-    return s
+def calcula_porcentaje(Y, Z, digitsNo: int):
+    '''
+    Calcula el porcentaje de aciertos del entrenador
+    '''
 
-## Calcula el coste sobre los ejemplos de entrenamiento para un cierto valor de theta
-def cost(theta, X, Y):
-    H = sigmoid(np.matmul(X, theta))
-    cost = (- 1 / (len(X))) * (np.dot(Y, np.log(H)) + np.dot((1 - Y), np.log(1 - H)))
-    return cost
+    m = Y.shape[0]
 
-## Calcula el coste de forma regularizada para un cierto lambda
-def regularizedCost(theta, lamda, X, Y):
-    regCost = cost(theta, X, Y)
+    # Creamos la matriz
+    results = np.empty(m)
 
-    #Añadimos el sumatorio de thetas al cuadrado al valor del coste normal
-    regCost = regCost + (lamda / 2*(len(X))) * np.sum(theta**2) 
-    return regCost
+    # Recorremos todos los ejemplos de entrenamiento...
+    for i in range (m):
+        results[i] = np.argmax(Z[i])
+    results = results.T
 
-## Calcula el gradiente sobre los ejemplos de entrenamiento para un cierto valor de theta
-def gradiente(theta, X, Y):
-    H = sigmoid(np.matmul(X, theta))
-    grad = (1/ len(Y)) * np.matmul(X.T, H-Y)
-    return grad
-
-## Calcula el gradiente de forma regularizada para un cierto lambda
-def regularizedGradient(theta, lamda, X, Y):
-    regGrad = gradiente(theta, X, Y)
-    aux = np.copy(theta)
-    aux[0] = 0
-    #Añadimos el sumatorio de thetas al valor del gradiente normal
-    regGrad = regGrad + (lamda / len(Y) * aux)
-    return regGrad
-
-## Calcula la predicción sobre x para un cierto theta
-def h(x, theta):
-    return np.dot(x, theta[np.newaxis].T)
-
-## Calcula el porcentaje de ejemplos de entrenamiento que han sido clasificados correctamente
-def calcula_porcentaje(reales, predichos):
-    predichos = predichos[np.newaxis].T
-
-    # Vemos cuántos de ellos coinciden con Y y devolvemos el porcentaje sobre el total de ejemplos
-    coinciden = ( reales == predichos )
+    # Vemos cuántos de ellos coinciden con Y 
+    Y = np.where (Y == 10, 0, Y) # Para que los '10' se cambien a '0'
+    coinciden = ( Y == results )
     aciertos = np.sum(coinciden)
 
-    return (aciertos / len(reales)) * 100
+    # Porcentaje sobre el total de ejemplos redondeado
+    return round((aciertos / m) * 100, digitsNo)
 
-
-# Implementa la regresión logística multiclase
-def oneVsAll(X, y, num_etiquetas, reg): # reg = término de regularizacion
-
-    #Creamos la matriz de thetas
-    thetas = np.zeros((num_etiquetas, X.shape[1]))
-
-    #Clasificador para cada una de las etiquetas
-    for i in range (num_etiquetas):
-        # Vector de 'y' para la iteración concreta
-        iterY = np.copy(y)
-        if(i == 0):
-            iterY = np.where (iterY == 10, 1, 0)
-        else:
-            iterY = np.where (iterY == i, 1, 0)
-
-        # Calculamos el vector de pesos óptimo igual que en el ejercicio 2
-        result = opt.fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()))
-        thetas[i] = result[0]
-
-    return thetas
-
-
-def forward_propagate(X, theta1, theta2):
+#Nº nodos en cada capa: 400, 25, 10
+def forward_prop_generic(X, thetas, num_layers:int):
     m = X.shape[0]
+    inputLayer = X
+
+    # 1 iteración por cada capa de la matriz
+    for i in range (num_layers):
+        # Añadimos la columna de 1's a la entrada
+        inputLayer = np.hstack([np.ones([m, 1]), inputLayer])
+        # Calculamos la capa de salida
+        outputLayer = hMatrix(inputLayer, thetas[i]) 
+        # Capa de entrada de la siguiente iteración
+        inputLayer = sigmoid(outputLayer)
+
+    return inputLayer
+
+#Nº nodos en cada capa: 400, 25, 10
+def forward_prop(X, theta1, theta2):
+    '''
+    Propagación hacia delante en la red neuronal
+    '''
+    m = X.shape[0]
+
     a1 = np.hstack([np.ones([m, 1]), X])
     z2 = np.dot(a1, theta1.T)
     a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
     z3 = np.dot(a2, theta2.T)
     h = sigmoid(z3)
-    return h
 
-## Regresión logística multiclase
+    return a1, z2, a2, z3, h
+
+def back_prop (params_rn, num_entradas, num_ocultas, num_etiquetas, X, y, reg):
+    '''
+    Propagación inversa en la red neuronal para hallar el coste y el gradiente
+    '''
+    #theta1 = np.reshape (params_rn[:num_ocultas ∗ (num_entradas + 1)], (num_ocultas, (num_entradas + 1)))
+    #theta2 = np.reshape (params_rn[num_ocultas ∗ (num_entradas + 1):], (num_etiquetas, (num_ocultas + 1)))
+
+
+
+    #Hay que devolver:
+    # 1) Coste 
+    # 2) Gradiente
+
+
 def Ejercicio1(lamda):
+    '''
+    Redes neuronales
+    '''
+    #Cargamos los datos
     data = loadmat('ex4data1.mat') 
-    X = data['X']
-    y = data['y'] 
-    
+    X = data['X'] # (5000x400)
+    y = data['y'].ravel()
+    num_etiquetas = 10
 
+    # Visualizar los 100 ejemplos
+    sample = np.random.choice(X.shape[0], 100)
+    fig, ax = displayData(X[sample])
+    plt.show()
+
+
+
+#np.set_printoptions(threshold=sys.maxsize) #Para que escriba todos los valores de los arrays
 Ejercicio1(0.1)

@@ -1,6 +1,7 @@
 ## Ramón Arjona Quiñones
 ## Celia Castaños Bornaechea
 
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import fmin_tnc
@@ -25,30 +26,24 @@ def oneVsAll(X: np.array, y: np.array, num_etiquetas: int, reg: float):
             iterY = np.where (iterY == i, 1, 0)
 
         # Calculamos el vector de pesos óptimo para ese clasificador
-        thetas[i] = fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()))[0]
+        thetas[i] = fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()), messages=0)[0]
 
     return thetas
 
-def calcula_porcentaje(X, Y, thetas, digitsNo: int):
+def calcula_porcentaje(Y, Z, digitsNo: int):
     '''
     Calcula el porcentaje de aciertos del entrenador
     '''
-    # Variables auxiliares
-    m = X.shape[0]
-    num_etiquetas = thetas.shape[0]
+
+    m = Y.shape[0]
 
     # Creamos la matriz
-    affinities = np.zeros((num_etiquetas))
-    results = np.zeros(m)
+    results = np.empty(m)
 
     # Recorremos todos los ejemplos de entrenamiento...
     for i in range (m):
-        # Afinidad del ejemplo con cada clasificador
-        affinities = sigmoid(hMatrix(X[i], thetas))
-        # Nos quedamos con el clasificador que de el valor más alto
-        results[i] = np.argmax(affinities)
-
-    results = results[np.newaxis].T
+        results[i] = np.argmax(Z[i])
+    results = results.T
 
     # Vemos cuántos de ellos coinciden con Y 
     Y = np.where (Y == 10, 0, Y) # Para que los '10' se cambien a '0'
@@ -58,14 +53,34 @@ def calcula_porcentaje(X, Y, thetas, digitsNo: int):
     # Porcentaje sobre el total de ejemplos redondeado
     return round((aciertos / m) * 100, digitsNo)
 
-def forward_propagate(X, theta1, theta2):
+#Nº nodos en cada capa: 400, 25, 10
+def forward_prop_generic(X, thetas, num_layers:int):
     m = X.shape[0]
+    inputLayer = X
+
+    # 1 iteración por cada capa de la matriz
+    for i in range (num_layers):
+        # Añadimos la columna de 1's a la entrada
+        inputLayer = np.hstack([np.ones([m, 1]), inputLayer])
+        # Calculamos la capa de salida
+        outputLayer = hMatrix(inputLayer, thetas[i]) 
+        # Capa de entrada de la siguiente iteración
+        inputLayer = sigmoid(outputLayer)
+
+    return inputLayer
+
+#Nº nodos en cada capa: 400, 25, 10
+def forward_prop(X, theta1, theta2):
+    m = X.shape[0]
+
     a1 = np.hstack([np.ones([m, 1]), X])
     z2 = np.dot(a1, theta1.T)
     a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
     z3 = np.dot(a2, theta2.T)
     h = sigmoid(z3)
-    return h
+
+    return a1, z2, a2, z3, h
+
 
 def Ejercicio1(lamda):
     '''
@@ -73,9 +88,9 @@ def Ejercicio1(lamda):
     '''
     # Leemos los datos de las matrices (en formato .mat) con 5k ejemplos de entrenamiento
     # Cada ejemplo es una imagen de 20x20 pixeles, cada uno es un número real en escala de grises
-    data = loadmat('ex3data1.mat') # Devuelve un diccionario
+    data = loadmat('ex4data1.mat') # Devuelve un diccionario
     X = data['X'] # Cada ejemplo de entrenamiento en una fila (5000x400)
-    y = data['y'] # 1 - 10 (el 10 es 0)
+    y = data['y'].ravel() # 1 - 10 (el 10 es 0)
     num_etiquetas = 10
 
     #Inicializamos theta y ponemos la columna de 1's a las X
@@ -85,32 +100,36 @@ def Ejercicio1(lamda):
 
     # Resolvemos el one vs All (debería estar bien)
     thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
+    z = sigmoid(hMatrix(unosX, thetas))
 
-    print("El entrenador tiene una precisión del ", calcula_porcentaje(unosX, y, thetas, 4), "%")
+    print("El entrenador tiene una precisión del ", calcula_porcentaje(y, z, 4), "%")
 
 
 def Ejercicio2():
     '''
     Redes neuronales con unos pesos ya dados
     '''
-    data = loadmat('ex3data1.mat') # Devuelve un diccionario
+    #Cargamos los datos
+    data = loadmat('ex3data1.mat') 
     X = data['X'] # (5000x400)
-    y = data['y'] # 1 - 10 (el 10 es 0)
+    y = data['y'].ravel()
     num_etiquetas = 10
 
-    m = X.shape[0]
-    unos = np.ones((m, 1))
-    unosX = np.hstack((unos, X))
-
+    # Guardamos las matrices de theta (leídas de archivo) en una lista
     weights = loadmat ( "ex3weights.mat" )
     theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
     # Theta1 es de dimensión 25 x 401
     # Theta2 es de dimensión 10 x 26
+    thetas = [theta1, theta2] #lista
 
-    h = forward_propagate(X, theta1, theta2) # h es de 5000x10
+    # Hacemos la propagación hacia delante
+    #h = forward_prop_generic(X, thetas, 2) # z es de 5000x10
+    #a1, z2, a2, z3, 
+    h = forward_prop_generic(X, thetas, 2) # z es de 5000x10
 
-    #print("El entrenador tiene una precisión del ", calcula_porcentaje(unosX, y, h, 4), "%")
+    print("El entrenador tiene una precisión del ", calcula_porcentaje(y, h, 4), "%")
 
 
-Ejercicio1(0.1)
-#Ejercicio2()
+np.set_printoptions(threshold=sys.maxsize) #Para que escriba todos los valores de los arrays
+#Ejercicio1(0.1)
+Ejercicio2()

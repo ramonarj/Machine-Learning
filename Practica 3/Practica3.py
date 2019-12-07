@@ -54,22 +54,6 @@ def calcula_porcentaje(Y, Z, digitsNo: int):
     return round((aciertos / m) * 100, digitsNo)
 
 #Nº nodos en cada capa: 400, 25, 10
-def forward_prop_generic(X, thetas, num_layers:int):
-    m = X.shape[0]
-    inputLayer = X
-
-    # 1 iteración por cada capa de la matriz
-    for i in range (num_layers):
-        # Añadimos la columna de 1's a la entrada
-        inputLayer = np.hstack([np.ones([m, 1]), inputLayer])
-        # Calculamos la capa de salida
-        outputLayer = hMatrix(inputLayer, thetas[i]) 
-        # Capa de entrada de la siguiente iteración
-        inputLayer = sigmoid(outputLayer)
-
-    return inputLayer
-
-#Nº nodos en cada capa: 400, 25, 10
 def forward_prop(X, theta1, theta2):
     m = X.shape[0]
 
@@ -81,14 +65,13 @@ def forward_prop(X, theta1, theta2):
 
     return a1, z2, a2, z3, h
 
-
 def Ejercicio1(lamda):
     '''
     Regresión logística OneVsAll
     '''
     # Leemos los datos de las matrices (en formato .mat) con 5k ejemplos de entrenamiento
     # Cada ejemplo es una imagen de 20x20 pixeles, cada uno es un número real en escala de grises
-    data = loadmat('ex4data1.mat') # Devuelve un diccionario
+    data = loadmat('ex3data1.mat') # Devuelve un diccionario
     X = data['X'] # Cada ejemplo de entrenamiento en una fila (5000x400)
     y = data['y'].ravel() # 1 - 10 (el 10 es 0)
     num_etiquetas = 10
@@ -113,6 +96,7 @@ def Ejercicio2():
     data = loadmat('ex3data1.mat') 
     X = data['X'] # (5000x400)
     y = data['y'].ravel()
+    y = y - 1 #Porque están de 1 - 10 y los queremos del 0 - 9
     num_etiquetas = 10
 
     # Guardamos las matrices de theta (leídas de archivo) en una lista
@@ -120,16 +104,13 @@ def Ejercicio2():
     theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
     # Theta1 es de dimensión 25 x 401
     # Theta2 es de dimensión 10 x 26
-    thetas = [theta1, theta2] #lista
 
     # Hacemos la propagación hacia delante
-    #h = forward_prop_generic(X, thetas, 2) # z es de 5000x10
-    #a1, z2, a2, z3, 
-    h = forward_prop_generic(X, thetas, 2) # z es de 5000x10
+    a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
 
     print("El entrenador tiene una precisión del ", calcula_porcentaje(y, h, 4), "%")
 
 
-np.set_printoptions(threshold=sys.maxsize) #Para que escriba todos los valores de los arrays
+#np.set_printoptions(threshold=sys.maxsize) #Para que escriba todos los valores de los arrays
 #Ejercicio1(0.1)
 Ejercicio2()

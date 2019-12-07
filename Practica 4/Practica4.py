@@ -86,12 +86,25 @@ def Ejercicio1(lamda):
     data = loadmat('ex4data1.mat') 
     X = data['X'] # (5000x400)
     y = data['y'].ravel()
+    y = y - 1 #Porque están de 1 - 10 y los queremos del 0 - 9
     num_etiquetas = 10
 
     # Visualizar los 100 ejemplos
     sample = np.random.choice(X.shape[0], 100)
     fig, ax = displayData(X[sample])
     plt.show()
+
+    # Guardamos las matrices de theta (leídas de archivo) en una lista
+    weights = loadmat ( "ex4weights.mat" )
+    theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
+    # Theta1 es de dimensión 25 x 401
+    # Theta2 es de dimensión 10 x 26
+    thetas = [theta1, theta2]
+
+    # Hacemos la propagación hacia delante
+    a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
+
+    # Hacemos la propagación hacia atrás
 
 
 

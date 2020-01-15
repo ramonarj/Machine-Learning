@@ -32,8 +32,8 @@ def LoadFlowerImages(DIR, flowerType):
     for img in tqdm(os.listdir(DIR)): #Recorre las imágenes de ese directorio
         # label = assign_label(img,flower_type)
         path = os.path.join(DIR,img) #Path de la imagen
-        img = cv2.cv2.imread(path, cv2.cv2.IMREAD_COLOR) #Lee la imagen
-        img = cv2.cv2.resize(img, (IMG_SIZE, IMG_SIZE)) #La reescala
+        img = cv2.imread(path, cv2.IMREAD_COLOR) #Lee la imagen
+        img = cv2.resize(img, (IMG_SIZE, IMG_SIZE)) #La reescala
         row = []
         for i in range(0, 5):
             if i==flowerType:

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import cv2
 import os
+import random as rn
 
 from tqdm import tqdm
 from scipy.optimize import fmin_tnc
@@ -17,7 +18,7 @@ from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradie
 X=[]
 Y=[]
 
-IMG_SIZE = 20
+IMG_SIZE = 150
 DIR_DAISY='flowers/daisy'
 DIR_SUNFLOWER='flowers/sunflower'
 DIR_TULIP='flowers/tulip'
@@ -33,15 +34,26 @@ def LoadFlowerImages(DIR, flowerType):
         path = os.path.join(DIR,img) #Path de la imagen
         img = cv2.cv2.imread(path, cv2.cv2.IMREAD_COLOR) #Lee la imagen
         img = cv2.cv2.resize(img, (IMG_SIZE, IMG_SIZE)) #La reescala
+        row = []
+        for i in range(0, 5):
+            if i==flowerType:
+                row.append(1)
+            else:
+                row.append(0)
         
         X.append(np.array(img)) #Añade la imagen a los casos de entrenamiento
-        Y.append(flowerType) #Pone en la posición correspondiente de la matriz salida qué flor es 
+        Y.append(row) #Pone en la posición correspondiente de la matriz salida qué flor es 
         
 
 
 def main():
-    LoadFlowerImages(FLOWER_DAISY_DIR, 'Daisy' )
-    print(len(X))
+    LoadFlowerImages(DIR_DAISY, 0 )
+    LoadFlowerImages(DIR_SUNFLOWER, 1 )
+
+    print(Y[760])
+    print(Y[769])
+
+
     # PRUEBA INI - carga imagen y la muestra
     # img=mpimg.imread(FLOWER_DAISY_DIR)
     # imgplot = plt.imshow(img)

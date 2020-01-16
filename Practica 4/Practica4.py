@@ -101,26 +101,107 @@ def forward_prop(X, theta1, theta2):
     return a1, z2, a2, z3, h
 
 #TODO: hacer el backprop y el gradiente
-def back_prop (params_rn, num_entradas, num_ocultas, num_etiquetas, X, y, reg):
-    '''
-    Propagación inversa en la red neuronal para hallar el coste y el gradiente
-    '''
-    #theta1 = np.reshape (params_rn[:num_ocultas ∗ (num_entradas + 1)], (num_ocultas, (num_entradas + 1)))
-    #theta2 = np.reshape (params_rn[num_ocultas ∗ (num_entradas + 1):], (num_etiquetas, (num_ocultas + 1)))
+def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, reg):
+    """
+    Implementa la propagación hacia atrás de la red neuronal con 2 capas
+    Tenemos que convertir el vector "nn_params" en 2 matrices, ya que viene 
+    desenrollado. 
 
+    Devuelve el coste y el vector de gradientes (desenrollado también)
+    """
+    # Reshape nn_params back into the parameters Theta1 and Theta2,
+    # the weight matrices for our 2 layer neural network.
+    Theta1 = np.reshape(nn_params[:num_ocultas * (num_entradas + 1)],
+                        (num_ocultas, num_entradas + 1)) # (25,401)
+    Theta2 = np.reshape(nn_params[num_ocultas * (num_entradas + 1):],
+                        (num_etiquetas, num_ocultas + 1)) # (10,26)
+
+    # Get the number of training examples, m.
+    m = X.shape[0]
+    
+    # Insert a 1's column for the bias unit.
+    X = np.insert(X, 0, 1, axis=1) # (5000,401)
+    
+    # Perform forward propagation to compute a(l) for l=1,...,L.
+    # z(l+1) = theta(l)a(l) and a(l+1) = g(z(l+1)).
+    z2 = np.dot(X, Theta1.T) # (5000, 25)
+    a2 = sigmoid(z2) # (5000, 25)
+    
+    # Add 1's for the bias unit.
+    a2 = np.insert(a2, 0, 1, axis=1) # (5000,26)
+    z3 = np.dot(a2, Theta2.T) # (5000, 10)
+    a3 = sigmoid(z3) # (5000, 10)
+    
+    # Create a y matrix of shape (m, K)
+    # for later use in recoding.
+    y_recoded = np.zeros((m, num_etiquetas)) # (5000, 10)
+    
+    # Initialize Delta matrices.
+    D1 = np.zeros((num_ocultas, num_entradas + 1)) # (25,401)
+    D2 = np.zeros((num_etiquetas, num_ocultas + 1)) # (10,26)
+    
+    #############################################################
+    ########## Forward Propagation and Cost Computation #########
+    #############################################################
+    
+    # Initialize cost.
+    j = 0
+    # Fwd pass; for training example t = 1,...,m:
     for t in range(m):
-        a1t = a1[t, :] # (1, 401)
-        a2t = a2[t, :] # (1, 26)
-        ht = h[t, :] # (1, 10)
-        yt = y[t] # (1, 10)
-        d3t = ht - yt # (1, 10)
-        d2t = np.dot(theta2.T, d3t) * (a2t * (1 - a2t)) # (1, 26)
-        delta1 = delta1 + np.dot(d2t[1:, np.newaxis], a1t[np.newaxis, :])
-        delta2 = delta2 + np.dot(d3t[:, np.newaxis], a2t[np.newaxis, :])
+        x_t = X[t]
+        
+        # Recode the categorical integer values of  y
+        # as vectors with all values set to zeros except
+        # for one value set to "1", which indicates whether
+        # it belongs to class k (yk = 1).
+        y_recoded[t, y[t] - 1] = 1
+            
+        # Compute cost for every training example.
+        j += np.sum(-y_recoded[t] * np.log(a3[t]) - (1 - y_recoded[t]) * np.log(1 - a3[t])) # float
 
-    #Hay que devolver:
-    # 1) Coste 
-    # 2) Gradiente
+        ###############################################################
+        ########## Back Propagation and Gradients Computation #########
+        ###############################################################
+    
+        # Compute the error delta.
+        d_3 = a3[t] - y_recoded[t] # (10,)
+        d_3 = d_3.reshape(-1,1) # (10,1)
+        
+        # Perform back propagation.
+        # In the parameters Thetas_i,j, i are indexed
+        # starting from 1, and j is indexed starting from  0.
+        d_2 = np.dot(Theta2.T[1:,:], d_3) * sigmoid(z2[t].reshape(-1,1)) # (25,10)x(10,1).*(25,1) = (25,1)
+        D1 += np.dot(d_2, x_t.reshape(-1, 1).T) # (25,401)
+        D2 += np.dot(d_3, a2[t].reshape(1,-1)) # (10,26)
+
+    # Compute total cost.
+    J = j / m # float
+    
+    # Compute the regularization term.
+    # We should not be regularizing the first column of theta,
+    # which is used for the bias term.
+    Theta1_sum = np.sum(np.square(Theta1[:,1:])) # float
+    Theta2_sum = np.sum(np.square(Theta2[:,1:])) # float
+    reg_term = Theta1_sum + Theta2_sum # float
+    
+    # Compute total cost with regularization.
+    J = J + (reg / (2 * m)) * reg_term # float
+    
+    # Update our new Delta matrices with regularization.
+    # We should not be regularizing the first column of theta,
+    # which is used for the bias term.
+    # First devide every value in Deltas with m.
+    D1 = D1 / m
+    D2 = D2 / m
+    D1[:,1:] = D1[:,1:] + (reg / m) * Theta1[:,1:]
+    D2[:,1:] = D2[:,1:] + (reg / m) * Theta2[:,1:]
+    
+    # Unroll gradients.
+    Deltas = [D1, D2]
+    unrolled_Deltas = [Deltas[i].ravel() for i,_ in enumerate(Deltas)]
+    grad = np.concatenate(unrolled_Deltas)
+
+    return J, grad
 
 
 def Ejercicio1(lamda):
@@ -155,7 +236,10 @@ def Ejercicio1(lamda):
     theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
     # Theta1 es de dimensión 25 x 401
     # Theta2 es de dimensión 10 x 26
-    thetas = [theta1, theta2]
+    thetas = [theta1.ravel(), theta2.ravel()] 
+
+    # Unimos los 2 en un solo vector
+    nn_params = np.concatenate(thetas)
 
     # Hacemos la propagación hacia delante
     a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
@@ -165,6 +249,8 @@ def Ejercicio1(lamda):
     print("Coste regularizado:", regCost)
 
     # Hacemos la propagación hacia atrás
+    regCost, grad = back_prop(nn_params, 400, 25, 10, X, y, lamda)
+    print("Coste regularizado:", regCost)
 
 
 Ejercicio1(1)

@@ -19,19 +19,19 @@ X=[]
 Y=[]
 
 IMG_SIZE = 150
-DIR_DAISY='flowers/daisy'
-DIR_SUNFLOWER='flowers/sunflower'
-DIR_TULIP='flowers/tulip'
-DIR_DANDI='flowers/dandelion'
-DIR_ROSE='flowers/rose'
-
-    
+RES_PATH = 'flowers/'
+FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
+FLOWER_COUNT = [769, 1055, 784, 734, 984]
 
         
-def LoadFlowerImages(DIR, flowerType):
-    for img in tqdm(os.listdir(DIR)): #Recorre las imágenes de ese directorio
+def LoadFlowerImages(flowerType):
+    '''
+    Carga las imágenes del directorio especificado y rellena la Y (one_hot) con el índice especificado
+    '''
+    folder = RES_PATH + FLOWER_NAMES[flowerType]
+    for img in tqdm(os.listdir(folder)): #Recorre las imágenes de ese directorio
         # label = assign_label(img,flower_type)
-        path = os.path.join(DIR,img) #Path de la imagen
+        path = os.path.join(folder,img) #Path de la imagen
         img = cv2.imread(path, cv2.IMREAD_COLOR) #Lee la imagen
         img = cv2.resize(img, (IMG_SIZE, IMG_SIZE)) #La reescala
         row = []
@@ -47,11 +47,13 @@ def LoadFlowerImages(DIR, flowerType):
 
 
 def main():
-    LoadFlowerImages(DIR_DAISY, 0 )
-    LoadFlowerImages(DIR_SUNFLOWER, 1 )
+
+    #Cargamos todas las imágenes de sus respectivas carpetas
+    for i in range (2): #len(FLOWER_NAMES)
+        LoadFlowerImages(i)
 
     print(Y[760])
-    print(Y[769])
+    print(Y[FLOWER_COUNT[0]])
 
 
     # PRUEBA INI - carga imagen y la muestra

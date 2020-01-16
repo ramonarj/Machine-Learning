@@ -57,7 +57,7 @@ def main():
 
 
     # PRUEBA INI - carga imagen y la muestra
-    # img=mpimg.imread(FLOWER_DAISY_DIR)
+    # img=mpimg.imread(RES_PATH+FLOWER_NAMES[0])
     # imgplot = plt.imshow(img)
     # plt.show()
 

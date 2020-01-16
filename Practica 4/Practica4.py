@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import fmin_tnc
 from sklearn.preprocessing import PolynomialFeatures 
 from scipy.io import loadmat
-from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient
+from ML_utilities import h, hMatrix, sigmoid, sigmoidGradient, regularizedCost, regularizedGradient
 from displayData import displayData
+from checkNNGradients import checkNNGradients
 
 def calcula_porcentaje(Y, Z, digitsNo: int):
     '''
@@ -61,6 +62,7 @@ def reg_network_cost(H, Y, lamda, theta1, theta2):
 
     #Coste sin regularizar
     cost = network_cost(H, Y)
+    print(cost)
 
     #Término de regularización (las columnas de 1's de thetas las quitamos)
     thetaSum = ((theta1[:, 1:]**2).sum() + (theta2[:, 1:]**2).sum())
@@ -70,29 +72,13 @@ def reg_network_cost(H, Y, lamda, theta1, theta2):
     return (cost + regTerm)
 
 #Nº nodos en cada capa: 400, 25, 10
-def forward_prop_generic(X, thetas, num_layers:int):
-    m = X.shape[0]
-    inputLayer = X
-
-    # 1 iteración por cada capa de la matriz
-    for i in range (num_layers):
-        # Añadimos la columna de 1's a la entrada
-        inputLayer = np.hstack([np.ones([m, 1]), inputLayer])
-        # Calculamos la capa de salida
-        outputLayer = hMatrix(inputLayer, thetas[i]) 
-        # Capa de entrada de la siguiente iteración
-        inputLayer = sigmoid(outputLayer)
-
-    return inputLayer
-
-#Nº nodos en cada capa: 400, 25, 10
 def forward_prop(X, theta1, theta2):
     '''
     Propagación hacia delante en la red neuronal
     '''
     m = X.shape[0]
 
-    a1 = np.hstack([np.ones([m, 1]), X])
+    a1 = X
     z2 = np.dot(a1, theta1.T)
     a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
     z3 = np.dot(a2, theta2.T)
@@ -101,26 +87,77 @@ def forward_prop(X, theta1, theta2):
     return a1, z2, a2, z3, h
 
 #TODO: hacer el backprop y el gradiente
-def back_prop (params_rn, num_entradas, num_ocultas, num_etiquetas, X, y, reg):
-    '''
-    Propagación inversa en la red neuronal para hallar el coste y el gradiente
-    '''
-    #theta1 = np.reshape (params_rn[:num_ocultas ∗ (num_entradas + 1)], (num_ocultas, (num_entradas + 1)))
-    #theta2 = np.reshape (params_rn[num_ocultas ∗ (num_entradas + 1):], (num_etiquetas, (num_ocultas + 1)))
+def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda):
+    """
+    Implementa la propagación hacia atrás de la red neuronal con 2 capas
+    Tenemos que convertir el vector "nn_params" en 2 matrices, ya que viene 
+    desenrollado. 
 
+    Devuelve el coste y el vector de gradientes (desenrollado también)
+    """
+    # 1. Volvemos a construir las matrices de pesos
+    theta1 = np.reshape(nn_params[:num_ocultas * (num_entradas + 1)],
+                        (num_ocultas, num_entradas + 1)) # (25,401)
+    theta2 = np.reshape(nn_params[num_ocultas * (num_entradas + 1):],
+                        (num_etiquetas, num_ocultas + 1)) # (10,26)
+
+    # Número de ejemplos de entrenamiento
+    m = X.shape[0]
+    X = np.hstack([np.ones([m, 1]), X]) #Para el término indep.
+
+    # 2. Hacemos la propagación hacia delante
+    a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
+
+    # 4. Inicializamos las matrices delta
+    delta1 = np.zeros((num_ocultas, num_entradas + 1)) # (25,401)
+    delta2 = np.zeros((num_etiquetas, num_ocultas + 1)) # (10,26)
+    
+    # 5. RETRO - PROPAGACIÓN
     for t in range(m):
         a1t = a1[t, :] # (1, 401)
         a2t = a2[t, :] # (1, 26)
         ht = h[t, :] # (1, 10)
         yt = y[t] # (1, 10)
+
+        #Error en la capa de salida
         d3t = ht - yt # (1, 10)
+        #Error en la capa oculta
         d2t = np.dot(theta2.T, d3t) * (a2t * (1 - a2t)) # (1, 26)
+
         delta1 = delta1 + np.dot(d2t[1:, np.newaxis], a1t[np.newaxis, :])
         delta2 = delta2 + np.dot(d3t[:, np.newaxis], a2t[np.newaxis, :])
 
-    #Hay que devolver:
-    # 1) Coste 
-    # 2) Gradiente
+    # 6. Calculamos el coste regularizado
+    regCost = reg_network_cost(h, y, lamda, theta1, theta2)
+    
+    # Calculamos el gradiente dividiendo lo calculado en el bucle entre los "m" ejemplos de entrenamiento
+    delta1 = delta1 / m
+    delta2 = delta2 / m
+
+    #Regularizamos el gradiente
+    #delta1[:,1:] = delta1[:,1:] + (lamda / m) * theta1[:,1:]
+    #delta2[:,1:] = delta2[:,1:] + (lamda / m) * theta2[:,1:]
+    
+    # Desenrollamos el gradiente y lo devolvemos
+    deltas = [delta1.ravel(), delta2.ravel()] 
+    grad = np.concatenate(deltas)
+
+    return regCost, grad
+
+
+def pesosAleatorios(L_in, L_out):
+    """
+    Inicializa una matriz de pesos con valores aleatorios dentro de un rango epsilon
+    """
+    # Rango
+    epsilon = 0.12
+    
+    # Inicializamos la matriz con 0s
+    pesos = np.zeros((L_out, 1 + L_in))
+    
+    # Valores aleatorios en ese intervalo
+    pesos = np.random.rand(L_out, 1 + L_in) * (2 * epsilon) - epsilon
+    return pesos
 
 
 def Ejercicio1(lamda):
@@ -131,40 +168,38 @@ def Ejercicio1(lamda):
     data = loadmat('ex4data1.mat') 
     X = data['X'] # (5000x400)
     y = data['y'].ravel() #(5000,)
+    y = (y - 1) #Porque están de 1 - 10 y los queremos del 0 - 9
+    m = X.shape[0]
 
-    # Atributos
-    m = len(y)
-    input_size = X.shape[1]
+    # Atributos de la red neuronal
+    num_entradas = 400
+    num_ocultas = 25
     num_etiquetas = 10
 
-    #Porque están de 1 - 10 y los queremos del 0 - 9
-    y = (y - 1) 
+    # 3. Inicializamos y_onehot
     y_onehot = np.zeros((m, num_etiquetas)) #5000 x 10
-    
-    #Inicializamos y_onehot
     for i in range(m):
         y_onehot[i][y[i]] = 1
 
-    # Visualizar los 100 ejemplos
-    sample = np.random.choice(X.shape[0], 100)
-    fig, ax = displayData(X[sample])
+    # Visualizar 100 ejemplos
+    #sample = np.random.choice(X.shape[0], 100)
+    #fig, ax = displayData(X[sample])
     #plt.show()
 
     # Guardamos las matrices de theta (leídas de archivo) en una lista
     weights = loadmat ( "ex4weights.mat" )
-    theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
-    # Theta1 es de dimensión 25 x 401
-    # Theta2 es de dimensión 10 x 26
-    thetas = [theta1, theta2]
+    theta1, theta2 = weights ["Theta1"], weights ["Theta2"] #25x401 y 10x26
+    
+    # Unimos los 2 en un solo vector
+    thetas = [theta1.ravel(), theta2.ravel()] 
+    nn_params = np.concatenate(thetas)
 
-    # Hacemos la propagación hacia delante
-    a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
-
-    # Calculamos el coste regularizado
-    regCost = reg_network_cost(h, y_onehot, lamda, theta1, theta2)
+    # Hacemos la propagación hacia atrás, obteniendo el coste y el gradiente
+    regCost, grad = back_prop(nn_params, num_entradas, num_ocultas, num_etiquetas, X, y_onehot, lamda)
     print("Coste regularizado:", regCost)
+    print("Gradiente:", grad)
 
-    # Hacemos la propagación hacia atrás
+    #lol = checkNNGradients(back_prop, lamda)
 
 
 Ejercicio1(1)

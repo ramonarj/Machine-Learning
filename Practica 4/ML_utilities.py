@@ -19,6 +19,12 @@ def sigmoid(z):
     '''
     return 1 / (1 + np.exp(-z))
 
+def sigmoidGradient(z):
+    '''
+    Calcula la derivada del sigmoide del número z, tanto si es un número como si es un vector/matriz
+    '''
+    return sigmoid(z) * (1 - sigmoid(z))
+
 def regularizedCost(theta, lamda: float, X, Y):
     '''
     Calcula el coste para los ejemplos, pesos y término de regularización dados

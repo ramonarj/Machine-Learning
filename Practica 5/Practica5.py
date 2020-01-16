@@ -1,170 +1,123 @@
-## Ramón Arjona Quiñones
 ## Celia Castaños Bornaechea
+## Ramón Arjona Quiñones
 
-import sys
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import fmin_tnc
-from sklearn.preprocessing import PolynomialFeatures 
-from scipy.io import loadmat
-from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient
-from displayData import displayData
+import numpy as np
+import scipy.integrate
+import scipy.optimize as opt
+import scipy.io as io
 
-def calcula_porcentaje(Y, Z, digitsNo: int):
-    '''
-    Calcula el porcentaje de aciertos del entrenador
-    '''
-
-    m = Y.shape[0]
-
-    # Creamos la matriz
-    results = np.empty(m)
-
-    # Recorremos todos los ejemplos de entrenamiento...
-    for i in range (m):
-        results[i] = np.argmax(Z[i])
-    results = results.T
-
-    # Vemos cuántos de ellos coinciden con Y 
-    coinciden = ( Y == results )
-    aciertos = np.sum(coinciden)
-
-    # Porcentaje sobre el total de ejemplos redondeado
-    return round((aciertos / m) * 100, digitsNo)
-
-def network_cost(H, Y):
-    '''
-    Calcula el coste de manera vectorizada para la red neuronal,
-    con una salida de la red H y la Y de los ejemplos de entrenamiento
-    '''
-    #Variables auxiliares
-    m = Y.shape[0]
-
-    # Usamos "multiply" en vez de "dot" para que haga multiplicación elemento a elemento, (no producto escalar)
-    # y así luego los sumamos todos en vez de hacer un doble bucle
-    ## Coste cuando Y = 1
-    costeUno = np.multiply(Y, np.log(H)).sum() # Suma todos los elementos de la matriz (Y x H)
-    ## Coste cuando Y = 0
-    costeCero = np.multiply((1 - Y), np.log(1 - H)).sum() #etc
-
-    #Coste sin regularizar
-    return -1 / m * (costeUno + costeCero)
+from sklearn.preprocessing import PolynomialFeatures
 
 
-def reg_network_cost(H, Y, lamda, theta1, theta2):
-    '''
-    Calcula el coste (regularizado) para la red neuronal,
-    con una salida de la red H y la Y de los ejemplos de entrenamiento
-    '''
-    #Variables auxiliares
-    m = Y.shape[0]
+## Pinta la frontera de decisión en la regresión lineal (como una recta)
+def pinta_frontera_recta(X, Y, theta):
+    # Mínimo y máximo valor para cada componente de la X
+    x1_min, x1_max = X[:, 0].min(), X[:, 0].max()
+    x2_min, x2_max = X[:, 1].min(), X[:, 1].max()
 
-    #Coste sin regularizar
-    cost = network_cost(H, Y)
+    # Hacemos un meshgrid
+    xx1, xx2 = np.meshgrid(np.linspace(x1_min, x1_max),
+    np.linspace(x2_min, x2_max))
 
-    #Término de regularización (las columnas de 1's de thetas las quitamos)
-    thetaSum = ((theta1[:, 1:]**2).sum() + (theta2[:, 1:]**2).sum())
-    regTerm = lamda / (2 * m) * thetaSum
+    # Hallamos el sigmoide y cambiamos su tamaño
+    h = sigmoid(np.c_[np.ones((xx1.ravel().shape[0], 1)),
+    xx1.ravel(),
+    xx2.ravel()].dot(theta))
+    h = h.reshape(xx1.shape)
 
-    #Coste regularizado
-    return (cost + regTerm)
+    # Pintamos la frontera para z = 0.5
+    plt.contour(xx1, xx2, h, [0.5], linewidths=1, colors='b')
 
-#Nº nodos en cada capa: 400, 25, 10
-def forward_prop_generic(X, thetas, num_layers:int):
-    m = X.shape[0]
-    inputLayer = X
+## Pinta la frontera de decisión en la regresión logística (más precisa que la recta)
+def plot_decisionboundary(X, Y, theta, poly):
+    #Igual que pinta_frontera_recta pero con el poly_fit_transform
+    x1_min, x1_max = X[:, 0].min(), X[:, 0].max()
+    x2_min, x2_max = X[:, 1].min(), X[:, 1].max()
 
-    # 1 iteración por cada capa de la matriz
-    for i in range (num_layers):
-        # Añadimos la columna de 1's a la entrada
-        inputLayer = np.hstack([np.ones([m, 1]), inputLayer])
-        # Calculamos la capa de salida
-        outputLayer = hMatrix(inputLayer, thetas[i]) 
-        # Capa de entrada de la siguiente iteración
-        inputLayer = sigmoid(outputLayer)
+    xx1, xx2 = np.meshgrid(np.linspace(x1_min, x1_max),
+    np.linspace(x2_min, x2_max))
 
-    return inputLayer
+    h = sigmoid(poly.fit_transform(np.c_[xx1.ravel(), xx2.ravel()]).dot(theta))
+    h = h.reshape(xx1.shape)
 
-#Nº nodos en cada capa: 400, 25, 10
-def forward_prop(X, theta1, theta2):
-    '''
-    Propagación hacia delante en la red neuronal
-    '''
-    m = X.shape[0]
+    plt.contour(xx1, xx2, h, [0.5], linewidths=1, colors='g')
 
-    a1 = np.hstack([np.ones([m, 1]), X])
-    z2 = np.dot(a1, theta1.T)
-    a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
-    z3 = np.dot(a2, theta2.T)
-    h = sigmoid(z3)
-
-    return a1, z2, a2, z3, h
-
-#TODO: hacer el backprop y el gradiente
-def back_prop (params_rn, num_entradas, num_ocultas, num_etiquetas, X, y, reg):
-    '''
-    Propagación inversa en la red neuronal para hallar el coste y el gradiente
-    '''
-    #theta1 = np.reshape (params_rn[:num_ocultas ∗ (num_entradas + 1)], (num_ocultas, (num_entradas + 1)))
-    #theta2 = np.reshape (params_rn[num_ocultas ∗ (num_entradas + 1):], (num_etiquetas, (num_ocultas + 1)))
-
-    for t in range(m):
-        a1t = a1[t, :] # (1, 401)
-        a2t = a2[t, :] # (1, 26)
-        ht = h[t, :] # (1, 10)
-        yt = y[t] # (1, 10)
-        d3t = ht - yt # (1, 10)
-        d2t = np.dot(theta2.T, d3t) * (a2t * (1 - a2t)) # (1, 26)
-        delta1 = delta1 + np.dot(d2t[1:, np.newaxis], a1t[np.newaxis, :])
-        delta2 = delta2 + np.dot(d3t[:, np.newaxis], a2t[np.newaxis, :])
-
-    #Hay que devolver:
-    # 1) Coste 
-    # 2) Gradiente
-
-
-def Ejercicio1(lamda):
-    '''
-    Redes neuronales
-    '''
-    #Cargamos los datos
-    data = loadmat('ex4data1.mat') 
-    X = data['X'] # (5000x400)
-    y = data['y'].ravel() #(5000,)
-
-    # Atributos
-    m = len(y)
-    input_size = X.shape[1]
-    num_etiquetas = 10
-
-    #Porque están de 1 - 10 y los queremos del 0 - 9
-    y = (y - 1) 
-    y_onehot = np.zeros((m, num_etiquetas)) #5000 x 10
     
-    #Inicializamos y_onehot
-    for i in range(m):
-        y_onehot[i][y[i]] = 1
+## Calcula el sigmoide del número z
+def sigmoid(z): #Ej. 1.2
+    s = 1 / (1 + np.exp(-z))
+    return s
 
-    # Visualizar los 100 ejemplos
-    sample = np.random.choice(X.shape[0], 100)
-    fig, ax = displayData(X[sample])
-    #plt.show()
+## Calcula el coste sobre los ejemplos de entrenamiento para un cierto valor de theta
+def cost(theta, X, Y):
+    H = sigmoid(np.matmul(X, theta))
+    cost = (- 1 / (len(X))) * (np.dot(Y, np.log(H)) + np.dot((1 - Y), np.log(1 - H)))
+    return cost
 
-    # Guardamos las matrices de theta (leídas de archivo) en una lista
-    weights = loadmat ( "ex4weights.mat" )
-    theta1, theta2 = weights ["Theta1"], weights ["Theta2"]
-    # Theta1 es de dimensión 25 x 401
-    # Theta2 es de dimensión 10 x 26
-    thetas = [theta1, theta2]
+## Calcula el coste de forma regularizada para un cierto lambda
+def regularizedCost(theta, lamda, X, Y):
+    regCost = cost(theta, X, Y)
 
-    # Hacemos la propagación hacia delante
-    a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
+    #Añadimos el sumatorio de thetas al cuadrado al valor del coste normal
+    regCost = regCost + (lamda / 2*(len(X))) * np.sum(theta**2) 
+    return regCost
 
-    # Calculamos el coste regularizado
-    regCost = reg_network_cost(h, y_onehot, lamda, theta1, theta2)
-    print("Coste regularizado:", regCost)
+## Calcula el gradiente sobre los ejemplos de entrenamiento para un cierto valor de theta
+def gradiente(theta, X, Y):
+    H = sigmoid(np.matmul(X, theta))
+    grad = (1/ len(Y)) * np.matmul(X.T, H-Y)
+    return grad
 
-    # Hacemos la propagación hacia atrás
+## Calcula el gradiente de forma regularizada para un cierto lambda
+def regularizedGradient(theta, lamda, X, Y):
+    regGrad = gradiente(theta, X, Y)
+    aux = np.copy(theta)
+    aux[0] = 0
+    #Añadimos el sumatorio de thetas al valor del gradiente normal
+    regGrad = regGrad + (lamda / len(Y) * aux)
+    return regGrad
+
+## Calcula la predicción sobre x para un cierto theta
+def h(x, theta):
+    return np.dot(x, theta[np.newaxis].T)
+
+## Calcula el porcentaje de ejemplos de entrenamiento que han sido clasificados correctamente
+def calcula_porcentaje(X, Y, theta):
+
+    #Calculamos el sigmoide
+    n = Y.shape[0]
+    H = sigmoid(np.matmul(X, theta))
+
+    # Ponemos los elementos de H a 1 (si hi > 0.5) o a 0 (si hi < 0.5)
+    H = np.where (H > 0.5, H, 0)
+    H = np.where (H < 0.5, H, 1)
+
+    # Vemos cuantos de ellos coinciden con Y y devolvemos el porcentaje sobre el total de ejemplos
+    coinciden = np.where ( Y == H )
+    aciertos = len(coinciden[0])
+
+    return (aciertos / n) * 100
+
+## Ejercicio 2: regresión logística y regularización (recibe el valor de lambda)
+def Ejercicio2():#lamda, grado):
+    #Leemos los valores de la matriz de datos
+    # datos = scipy.io.loadmat("ex5data1.mat")
+    datos = io.loadmat("ex5data1.mat")
+    trainingX, trainingY = datos ["X"], datos ["y"]
+    validationX, validationY = datos ["Xval"], datos ["yval"]
+    testX, testY = datos ["Xtest"], datos ["ytest"]
+
+    #Inicializamos theta y ponemos la columna de 1's a las X
+    theta = np.zeros((X.shape[1] + 1))
+    m = trainingX.shape[0]
+    unos = np.ones((m, 1))
+    unosX = np.hstack((unos, trainingX))
+
+    # Calculamos el vector de pesos óptimo gracias a la función fmin_tnc (que recibe el valor inicial, 
+    # las funciones de coste y gradiente y los parámetros extra necesarios (X, Y y lambda))
+    result = opt.fmin_tnc(func = cost, x0=theta, fprime=gradiente, args=(unosX,Y))
+    theta_opt = result[0]
 
 
-Ejercicio1(1)
+Ejercicio2()#10, 6)

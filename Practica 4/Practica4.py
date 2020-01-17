@@ -4,7 +4,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import fmin_tnc
+from scipy.optimize import minimize
 from sklearn.preprocessing import PolynomialFeatures 
 from scipy.io import loadmat
 from ML_utilities import h, hMatrix, sigmoid, sigmoidGradient, regularizedCost, regularizedGradient
@@ -62,7 +62,6 @@ def reg_network_cost(H, Y, lamda, theta1, theta2):
 
     #Coste sin regularizar
     cost = network_cost(H, Y)
-    print(cost)
 
     #Término de regularización (las columnas de 1's de thetas las quitamos)
     thetaSum = ((theta1[:, 1:]**2).sum() + (theta2[:, 1:]**2).sum())
@@ -135,12 +134,11 @@ def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda)
     delta2 = delta2 / m
 
     #Regularizamos el gradiente
-    #delta1[:,1:] = delta1[:,1:] + (lamda / m) * theta1[:,1:]
-    #delta2[:,1:] = delta2[:,1:] + (lamda / m) * theta2[:,1:]
+    delta1[:,1:] = delta1[:,1:] + (lamda / m) * theta1[:,1:]
+    delta2[:,1:] = delta2[:,1:] + (lamda / m) * theta2[:,1:]
     
     # Desenrollamos el gradiente y lo devolvemos
-    deltas = [delta1.ravel(), delta2.ravel()] 
-    grad = np.concatenate(deltas)
+    grad = np.concatenate((delta1.ravel(), delta2.ravel()))
 
     return regCost, grad
 
@@ -159,8 +157,7 @@ def pesosAleatorios(L_in, L_out):
     pesos = np.random.rand(L_out, 1 + L_in) * (2 * epsilon) - epsilon
     return pesos
 
-
-def Ejercicio1(lamda):
+def Ejercicio1(lamda, num_iter):
     '''
     Redes neuronales
     '''
@@ -186,20 +183,50 @@ def Ejercicio1(lamda):
     #fig, ax = displayData(X[sample])
     #plt.show()
 
-    # Guardamos las matrices de theta (leídas de archivo) en una lista
-    weights = loadmat ( "ex4weights.mat" )
-    theta1, theta2 = weights ["Theta1"], weights ["Theta2"] #25x401 y 10x26
+    # Pesos óptimos (para comprobar el coste)
+    #weights = loadmat ( "ex4weights.mat" )
+    #theta1, theta2 = weights ["Theta1"], weights ["Theta2"] #25x401 y 10x26
+
+    # Damos unos pesos aleatorios para luego entrenarlos
+    theta1 = pesosAleatorios(num_entradas, num_ocultas)
+    theta2 = pesosAleatorios(num_ocultas, num_etiquetas)
     
     # Unimos los 2 en un solo vector
-    thetas = [theta1.ravel(), theta2.ravel()] 
-    nn_params = np.concatenate(thetas)
+    nn_params = np.concatenate((theta1.ravel(), theta2.ravel()))
 
     # Hacemos la propagación hacia atrás, obteniendo el coste y el gradiente
-    regCost, grad = back_prop(nn_params, num_entradas, num_ocultas, num_etiquetas, X, y_onehot, lamda)
-    print("Coste regularizado:", regCost)
-    print("Gradiente:", grad)
+    #regCost, grad = back_prop(nn_params, num_entradas, num_ocultas, num_etiquetas, X, y_onehot, lamda)
+    # Chequeamos que el gradiente está bien
+    #diff = checkNNGradients(back_prop, lamda)
+    #print("Coste regularizado:", regCost)
+    #print("Gradiente:", grad)
 
-    #lol = checkNNGradients(back_prop, lamda)
+    # Llamamos a la función minimize para obtener las matrices de pesos óptimas
+    #(las que hacen que haya un mínimo en el coste devuelto)
+    thetaOpt = minimize(fun=back_prop,
+                       x0=nn_params,
+                       args=(num_entradas,
+                             num_ocultas,
+                             num_etiquetas,
+                             X, y_onehot, lamda),
+                       method='TNC',
+                       jac=True,
+                       options={'maxiter':num_iter})
+
+    thetaOpt = thetaOpt.x
+
+    # Tenemos que reconstruir los pesos a partir del vector
+    theta1 = np.reshape(thetaOpt[:num_ocultas * (num_entradas + 1)],
+                        (num_ocultas, num_entradas + 1)) 
+    theta2 = np.reshape(thetaOpt[num_ocultas * (num_entradas + 1):],
+                        (num_etiquetas, num_ocultas + 1)) 
+
+    # Con los pesos óptimos obtenidos, hacemos la propagación para ver la efectividad de la red
+    unosX = np.hstack([np.ones([m, 1]), X])
+    a1, z2, a2, z3, h = forward_prop(unosX, theta1, theta2) 
+
+    porcentaje = calcula_porcentaje(y, h, 3)
+    print("La red clasificado bien un",  porcentaje, " % de los ejemplos")
 
 
-Ejercicio1(1)
+Ejercicio1(1, 70)

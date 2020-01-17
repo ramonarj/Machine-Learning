@@ -100,7 +100,7 @@ def calcula_porcentaje(X, Y, theta):
     return (aciertos / n) * 100
 
 ## Ejercicio 2: regresión logística y regularización (recibe el valor de lambda)
-def Ejercicio2():#lamda, grado):
+def Ejercicio2(lamda, grado):
     #Leemos los valores de la matriz de datos
     # datos = scipy.io.loadmat("ex5data1.mat")
     datos = io.loadmat("ex5data1.mat")
@@ -108,16 +108,14 @@ def Ejercicio2():#lamda, grado):
     validationX, validationY = datos ["Xval"], datos ["yval"]
     testX, testY = datos ["Xtest"], datos ["ytest"]
 
-    #Inicializamos theta y ponemos la columna de 1's a las X
-    theta = np.zeros((X.shape[1] + 1))
-    m = trainingX.shape[0]
-    unos = np.ones((m, 1))
-    unosX = np.hstack((unos, trainingX))
+    # Creamos el polinomio X de grado 6 a partir de combinaciones de x1 y x2
+    poly = PolynomialFeatures(grado)
+    polyX = poly.fit_transform(trainingX)
+    theta = np.zeros((polyX.shape[1]))
 
-    # Calculamos el vector de pesos óptimo gracias a la función fmin_tnc (que recibe el valor inicial, 
-    # las funciones de coste y gradiente y los parámetros extra necesarios (X, Y y lambda))
-    result = opt.fmin_tnc(func = cost, x0=theta, fprime=gradiente, args=(unosX,Y))
+    # Calculamos el vector de pesos óptimo igual que en el ejercicio 1 (ahora pasamos también lambda para la regularización)
+    result = opt.fmin_tnc(func = regularizedCost, x0=theta, fprime=regularizedGradient, args=(lamda, polyX, trainingY))
     theta_opt = result[0]
 
 
-Ejercicio2()#10, 6)
+Ejercicio2(1, 6)

@@ -27,6 +27,28 @@ def sigmoidGradient(z):
     '''
     return sigmoid(z) * (1 - sigmoid(z))
 
+def calcula_porcentaje(Y, Z, digitsNo: int):
+    '''
+    Calcula el porcentaje de aciertos del entrenador
+    '''
+
+    m = Y.shape[0]
+
+    # Creamos la matriz
+    results = np.empty(m)
+
+    # Recorremos todos los ejemplos de entrenamiento...
+    for i in range (m):
+        results[i] = np.argmax(Z[i])
+    results = results.T
+
+    # Vemos cuántos de ellos coinciden con Y 
+    coinciden = ( Y == results )
+    aciertos = np.sum(coinciden)
+
+    # Porcentaje sobre el total de ejemplos redondeado
+    return round((aciertos / m) * 100, digitsNo)
+
 ####    REGRESIÓN LOGÍSTICA     ####
 def regularizedCost(theta, lamda: float, X, Y):
     '''

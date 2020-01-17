@@ -73,7 +73,7 @@ def reg_network_cost(H, Y, lamda, theta1, theta2):
 #Nº nodos en cada capa: 400, 25, 10
 def forward_prop(X, theta1, theta2):
     '''
-    Propagación hacia delante en la red neuronal
+    Propagación hacia delante en la red neuronal de 2 capas
     '''
     m = X.shape[0]
 
@@ -107,11 +107,11 @@ def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda)
     # 2. Hacemos la propagación hacia delante
     a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) # z es de 5000x10
 
-    # 4. Inicializamos las matrices delta
+    # 3. Inicializamos las matrices delta (con ceros)
     delta1 = np.zeros((num_ocultas, num_entradas + 1)) # (25,401)
     delta2 = np.zeros((num_etiquetas, num_ocultas + 1)) # (10,26)
     
-    # 5. RETRO - PROPAGACIÓN
+    # 4. RETRO - PROPAGACIÓN
     for t in range(m):
         a1t = a1[t, :] # (1, 401)
         a2t = a2[t, :] # (1, 26)
@@ -126,20 +126,19 @@ def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda)
         delta1 = delta1 + np.dot(d2t[1:, np.newaxis], a1t[np.newaxis, :])
         delta2 = delta2 + np.dot(d3t[:, np.newaxis], a2t[np.newaxis, :])
 
-    # 6. Calculamos el coste regularizado
+    # 5. Calculamos el coste regularizado
     regCost = reg_network_cost(h, y, lamda, theta1, theta2)
     
-    # Calculamos el gradiente dividiendo lo calculado en el bucle entre los "m" ejemplos de entrenamiento
+    # 6. Calculamos el gradiente...
     delta1 = delta1 / m
     delta2 = delta2 / m
 
-    #Regularizamos el gradiente
+    # ... y lo regularizamos
     delta1[:,1:] = delta1[:,1:] + (lamda / m) * theta1[:,1:]
     delta2[:,1:] = delta2[:,1:] + (lamda / m) * theta2[:,1:]
     
-    # Desenrollamos el gradiente y lo devolvemos
+    # Desenrollamos el gradiente y lo devolvemos junto al coste
     grad = np.concatenate((delta1.ravel(), delta2.ravel()))
-
     return regCost, grad
 
 
@@ -161,14 +160,14 @@ def Ejercicio1(lamda, num_iter):
     '''
     Redes neuronales
     '''
-    #Cargamos los datos
+    # 1. Cargamos los datos
     data = loadmat('ex4data1.mat') 
     X = data['X'] # (5000x400)
     y = data['y'].ravel() #(5000,)
     y = (y - 1) #Porque están de 1 - 10 y los queremos del 0 - 9
     m = X.shape[0]
 
-    # Atributos de la red neuronal
+    # 2. Atributos de la red neuronal
     num_entradas = 400
     num_ocultas = 25
     num_etiquetas = 10
@@ -183,16 +182,14 @@ def Ejercicio1(lamda, num_iter):
     #fig, ax = displayData(X[sample])
     #plt.show()
 
-    # Pesos óptimos (para comprobar el coste)
+    # Pesos óptimos de archivo (para comprobar el coste)
     #weights = loadmat ( "ex4weights.mat" )
     #theta1, theta2 = weights ["Theta1"], weights ["Theta2"] #25x401 y 10x26
 
-    # Damos unos pesos aleatorios para luego entrenarlos
+    # 4. Comenzamos con unos pesos aleatorios
     theta1 = pesosAleatorios(num_entradas, num_ocultas)
     theta2 = pesosAleatorios(num_ocultas, num_etiquetas)
-    
-    # Unimos los 2 en un solo vector
-    nn_params = np.concatenate((theta1.ravel(), theta2.ravel()))
+    nn_params = np.concatenate((theta1.ravel(), theta2.ravel())) #Los unimos en 1 solo vector
 
     # Hacemos la propagación hacia atrás, obteniendo el coste y el gradiente
     #regCost, grad = back_prop(nn_params, num_entradas, num_ocultas, num_etiquetas, X, y_onehot, lamda)
@@ -201,8 +198,8 @@ def Ejercicio1(lamda, num_iter):
     #print("Coste regularizado:", regCost)
     #print("Gradiente:", grad)
 
-    # Llamamos a la función minimize para obtener las matrices de pesos óptimas
-    #(las que hacen que haya un mínimo en el coste devuelto)
+    # Llamamos a la función minimize para obtener las matrices de pesos óptimos
+    # (las que hacen que haya un mínimo en el coste devuelto)
     thetaOpt = minimize(fun=back_prop,
                        x0=nn_params,
                        args=(num_entradas,
@@ -211,9 +208,7 @@ def Ejercicio1(lamda, num_iter):
                              X, y_onehot, lamda),
                        method='TNC',
                        jac=True,
-                       options={'maxiter':num_iter})
-
-    thetaOpt = thetaOpt.x
+                       options={'maxiter':num_iter}).x
 
     # Tenemos que reconstruir los pesos a partir del vector
     theta1 = np.reshape(thetaOpt[:num_ocultas * (num_entradas + 1)],
@@ -221,12 +216,13 @@ def Ejercicio1(lamda, num_iter):
     theta2 = np.reshape(thetaOpt[num_ocultas * (num_entradas + 1):],
                         (num_etiquetas, num_ocultas + 1)) 
 
-    # Con los pesos óptimos obtenidos, hacemos la propagación para ver la efectividad de la red
+    # Con los pesos óptimos obtenidos, hacemos la propagación hacia delante y obtenemos la predicción de la red
     unosX = np.hstack([np.ones([m, 1]), X])
     a1, z2, a2, z3, h = forward_prop(unosX, theta1, theta2) 
 
+    # Sacamos el porcentaje de aciertos
     porcentaje = calcula_porcentaje(y, h, 3)
     print("La red clasificado bien un",  porcentaje, " % de los ejemplos")
 
-
+# lamda = 1, 70 iteraciones
 Ejercicio1(1, 70)

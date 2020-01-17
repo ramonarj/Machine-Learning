@@ -49,6 +49,30 @@ def gradienteRegularizado(X, Y, theta, lamda):
     
     return gradReg
 
+def costeYGradiente(X, Y, theta, lamda):
+    g = gradienteRegularizado(X, Y, theta, lamda)
+    c = costeRegularizado(X, Y, theta, lamda)
+    return c, g
+
+def entrenamientoMinimizarTheta(X, Y, lamda):
+    
+    theta = np.zeros(X.shape[1])
+    
+    def costFunction(theta):
+        return costeYGradiente(X, Y, theta, lamda)
+    
+    theta = opt.minimize(fun=costFunction, x0=theta, method='CG', jac=True, options={'maxiter':200})
+    return theta.x
+
+def pintaRecta(X, Y, theta):
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Cambios nivel agua (X)')
+    plt.ylabel('Derrame de agua (Y)')
+    plt.title('Figure 2: Recta ajustada')
+    plt.plot(X, Y, 'rx')
+    plt.plot(X, np.dot(np.insert(X, 0, 1, axis=1), theta))
+    plt.show()
+
 
 def Ejercicio1():
     #Leemos los valores de la matriz de datos y los guardamos
@@ -67,7 +91,10 @@ def Ejercicio1():
     print(costeRegularizado(unosX, trainingY, theta, 1))
     print(gradienteRegularizado(unosX, trainingY, theta, 1))
 
-   
+    
+    theta = entrenamientoMinimizarTheta(unosX, trainingY, 0)
+    print(theta)
 
+    pintaRecta(trainingX, trainingY, theta)
 
 Ejercicio1()

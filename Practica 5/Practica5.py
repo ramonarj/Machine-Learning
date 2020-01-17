@@ -73,6 +73,22 @@ def pintaRecta(X, Y, theta):
     plt.plot(X, np.dot(np.insert(X, 0, 1, axis=1), theta))
     plt.show()
 
+# Create a function that generates the errors.
+def curvaAprendizaje(X, Y, validationX, validationY, lamda):
+    m = X.shape[0]
+    
+    errorEntrenamiento = np.zeros(m)
+    errorValidation   = np.zeros(m)
+    
+    
+    for i in range(0, m):
+        j = i + 1
+        theta = entrenamientoMinimizarTheta(X[:j], Y[:j], lamda)
+    
+        errorEntrenamiento[i] = costeYGradiente(X[:j], Y[:j], theta, lamda)[0]
+        errorValidation[i] = costeYGradiente(validationX, validationY, theta, lamda)[0]
+        
+    return errorEntrenamiento, errorValidation
 
 def Ejercicio1():
     #Leemos los valores de la matriz de datos y los guardamos
@@ -97,4 +113,36 @@ def Ejercicio1():
 
     pintaRecta(trainingX, trainingY, theta)
 
-Ejercicio1()
+def Ejercicio2():
+    datos = io.loadmat("ex5data1.mat")
+    trainingX, trainingY = datos ["X"], datos ["y"]
+    validationX, validationY = datos ["Xval"], datos ["yval"]
+    testX, testY = datos ["Xtest"], datos ["ytest"]
+
+
+    m = trainingX.shape[0]
+    unosEntreno = np.ones((m, 1))
+    entrenoUnosX = np.hstack((unosEntreno, trainingX))
+
+    n = validationX.shape[0]
+    unosValidation = np.ones((n, 1))
+    validationUnosX = np.hstack((unosValidation, validationX))
+    
+
+    errorEntrenamiento, errorValidation = curvaAprendizaje(entrenoUnosX, trainingY, validationUnosX, validationY, 0)
+
+    print('# Training Examples\tTrain Error\tCross Validation Error\n')
+    for i in range(m):
+        print('{}\t\t\t{:f}\t{:f}\n'.format(i+1, float(errorEntrenamiento[i]), float(errorValidation[i])))
+
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Ejemplos de entrenamiento')
+    plt.ylabel('Errores')
+    plt.title('Figura 3: Curva de aprendizaje de la regresión lineal')
+    plt.plot(range(0,m), errorEntrenamiento, 'b', label='Entrenamiento')
+    plt.plot(range(0,m), errorValidation, 'y', label='Validación')
+    plt.legend()
+    plt.show()
+# Ejercicio1()
+Ejercicio2()
+

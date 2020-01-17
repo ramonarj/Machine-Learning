@@ -55,6 +55,9 @@ def main():
     print(Y[760])
     print(Y[FLOWER_COUNT[0]])
 
+    #Hacemos la red neuronal
+    
+
 
     # PRUEBA INI - carga imagen y la muestra
     # img=mpimg.imread(RES_PATH+FLOWER_NAMES[0])

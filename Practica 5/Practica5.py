@@ -32,22 +32,25 @@ def costeRegularizado(X, Y, theta, lamda):
     aux = (lamda / (2*m))*sum2
     return c + aux
 
-# def gradiente():
-#         # Initialize grad.
-#     grad = np.zeros(theta.shape)
-
-#     # Compute gradient for j >= 1.
-#     grad = (1 / m) * np.dot(X.T, np.dot(X, theta) - y) + (lambda_coef / m ) * theta
+def gradienteRegularizado(X, Y, theta, lamda):
+    n = theta.shape
+    gradReg = np.zeros(n)
+    m = X.shape[0]
     
-#     # Compute gradient for j = 0,
-#     # and replace the gradient of theta_0 in grad.
-#     unreg_grad = (1 / m) * np.dot(X.T, np.dot(X, theta) - y)
-#     grad[0] = unreg_grad[0]
+    sum0 = 0
+    for i in range(0, m):
+        sum0 += (h(X[i], theta) - Y[i])*(X[i, 0])
+    gradReg[0] = (1/m)*(sum0)
 
-#     return (cost, grad.flatten())
+    sum1 = 0
+    for i in range(0, m):
+        sum1 += (h(X[i], theta) - Y[i])*(X[i, 1])
+    gradReg[1] = ((1/m)*(sum1)) + ((lamda/m)*theta[1])
+    
+    return gradReg
 
-## Ejercicio 2: regresión logística y regularización (recibe el valor de lambda)
-def Ejercicio2():
+
+def Ejercicio1():
     #Leemos los valores de la matriz de datos y los guardamos
     datos = io.loadmat("ex5data1.mat")
     trainingX, trainingY = datos ["X"], datos ["y"]
@@ -60,8 +63,11 @@ def Ejercicio2():
     unosX = np.hstack((unos, trainingX))
 
     theta = np.array([[1], [1]])
+    
     print(costeRegularizado(unosX, trainingY, theta, 1))
+    print(gradienteRegularizado(unosX, trainingY, theta, 1))
+
    
 
 
-Ejercicio2()
+Ejercicio1()

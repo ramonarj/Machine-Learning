@@ -7,7 +7,7 @@ import cv2
 import os
 from tqdm import tqdm
 
-from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje
+from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, sigmoid, hMatrix, oneVsAll
 
 IMG_SIZE = 20
 RES_PATH = 'flowers/'
@@ -19,7 +19,21 @@ X = []
 Y = []
 onehotY = []
 
-        
+'''
+    División de las imágenes:
+    - 60% entrenamiento
+    - 20%validación
+    - 20% test
+'''
+
+
+def LoadAllImages():
+    '''
+    Carga todas las imágenes
+    '''
+    for i in range (len(FLOWER_NAMES)):
+        LoadFlowerImages(i)
+
 def LoadFlowerImages(flowerType):
     '''
     Carga las imágenes del directorio especificado y rellena la Y (one_hot) con el índice especificado
@@ -49,12 +63,28 @@ def LoadFlowerImages(flowerType):
         FLOWER_COUNT[flowerType] += 1 #Añadimos una flor al recuento
         
 
+#Regresión logística
+def LogisticRegressionClassifier(lamda):
+    
+    # Necesitamos usar arrays de numpy
+    nX = np.asarray(X)
+    y = np.asarray(Y)
+
+    # Atributos
+    m = nX.shape[0]
+    unosX = np.hstack([np.ones([m, 1]), nX])
+    num_etiquetas = len(FLOWER_NAMES)
+
+    # Resolvemos el one vs All 
+    thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
+    z = sigmoid(hMatrix(unosX, thetas))
+
+    print("El OneVsAll tiene una precisión del ", calcula_porcentaje(y, z, 4), "%")
+
+
+
 #De momento lo estamos haciendo en escala de grises
 def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
-
-    # 1. Cargamos todas las imágenes de sus respectivas carpetas
-    for i in range (len(FLOWER_NAMES)): #len(FLOWER_NAMES)
-        LoadFlowerImages(i)
 
     # Necesitamos usar arrays de numpy
     nX = np.asarray(X)
@@ -84,7 +114,18 @@ def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
 
     # Sacamos el porcentaje de aciertos
     porcentaje = calcula_porcentaje(y, h, 3)
-    print("La red clasificado bien un",  porcentaje, " % de los ejemplos")
+    print("La red tiene una precisión del ",  porcentaje, " %")
+
+#SVM
+def SVMClassifier():
+    print("Claro que sí guapi")
 
 
-NeutralNetworkClassifier(1, 100, 140)
+# 1. Cargamos todas las imágenes de sus respectivas carpetas
+LoadAllImages()
+# 2. Regresión logística
+LogisticRegressionClassifier(0.1)
+# 3. Red neuronal
+#NeutralNetworkClassifier(1, 100, 140)
+# 4. SVM
+#SVMClassifier()

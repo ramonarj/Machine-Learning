@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import minimize
+from scipy.optimize import minimize, fmin_tnc
 
 ####    COMÚN   ####
 def h(x, theta):
@@ -90,6 +90,25 @@ def regularizedGradient(theta, lamda: float, X, Y):
     theta[0] = aux
 
     return grad + regTerm
+
+
+def oneVsAll(X: np.array, y: np.array, num_etiquetas: int, reg: float):
+    '''
+    Implementa la regresión lineal multiclase (reg = término de regularización)
+    ''' 
+    #Creamos la matriz de thetas
+    thetas = np.zeros((num_etiquetas, X.shape[1]))
+
+    #Clasificador para cada una de las etiquetas
+    for i in range (num_etiquetas):
+        # Vector de 'y' para la iteración concreta
+        iterY = np.copy(y)
+        iterY = np.where (iterY == i, 1, 0)
+
+        # Calculamos el vector de pesos óptimo para ese clasificador
+        thetas[i] = fmin_tnc(func = regularizedCost, x0=thetas[i], fprime=regularizedGradient, args=(reg, X, iterY.ravel()), messages=0)[0]
+
+    return thetas
 
 
 ####    REDES NEURONALES    ####

@@ -6,52 +6,52 @@ import numpy as np
 import scipy.integrate
 import scipy.optimize as opt
 import scipy.io as io
+# from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient
 
 from sklearn.preprocessing import PolynomialFeatures
 
 def h(x, theta):
     return np.dot(x, theta[np.newaxis].T)
 
-def coste(X, Y, Theta):
+def coste(X, Y, theta):
     #Calculamos la función de coste
     m = X.shape[0]
-    sum1 = 0
-    for k in range(0, m):
-        sum1 += (h(X[k], Theta) - Y[k])**2
-    return 1 / (2*m) * sum1
+    sumatorio =  np.sum(np.square(np.dot(X, theta) - Y))
+    return (1 / (2 * m)) * sumatorio
 
 def costeRegularizado(X, Y, theta, lamda):
-    c = coste(X, Y, theta)
-    n = theta.shape[0]
+
     m = X.shape[0]
 
-    sum2 = 0
-    for k in range(1, n):
-        sum2 += theta[k]**2
-    
-    aux = (lamda / (2*m))*sum2
-    return c + aux
+    theta = theta.reshape(-1, Y.shape[1])
+    term0 = coste(X, Y, theta)
+    sumatorio = np.sum(np.square(theta[1:len(theta)]))
+    term1 = (lamda / (2 * m)) * sumatorio
+    cost = term0 + term1
+    return cost
+
+def gradiente(X, Y, theta):
+    m = X.shape[0]
+
+    grad = (1 / m) * np.dot(X.T, np.dot(X, theta) - Y)
+    return grad
 
 def gradienteRegularizado(X, Y, theta, lamda):
-    n = theta.shape
-    gradReg = np.zeros(n)
-    m = X.shape[0]
-    
-    sum0 = 0
-    for i in range(0, m):
-        sum0 += (h(X[i], theta) - Y[i])*(X[i, 0])
-    gradReg[0] = (1/m)*(sum0)
 
-    sum1 = 0
-    for i in range(0, m):
-        sum1 += (h(X[i], theta) - Y[i])*(X[i, 1])
-    gradReg[1] = ((1/m)*(sum1)) + ((lamda/m)*theta[1])
+    m = X.shape[0]
+    theta = theta.reshape(-1, Y.shape[1])
+    # n = theta.shape[0]
+    # # gradReg = np.zeros(n)
+
+    auxGrad = gradiente(X, Y, theta)
+    gradReg = auxGrad + (lamda / m ) * theta
     
-    return gradReg
+    gradReg[0] = auxGrad[0]
+    return gradReg.flatten()
 
 def costeYGradiente(X, Y, theta, lamda):
+    c = costeRegularizado( X, Y, theta, lamda)
     g = gradienteRegularizado(X, Y, theta, lamda)
-    c = costeRegularizado(X, Y, theta, lamda)
     return c, g
 
 def entrenamientoMinimizarTheta(X, Y, lamda):
@@ -89,6 +89,25 @@ def curvaAprendizaje(X, Y, validationX, validationY, lamda):
         errorValidation[i] = costeYGradiente(validationX, validationY, theta, lamda)[0]
         
     return errorEntrenamiento, errorValidation
+
+def generaDatos(X, grado):
+
+    Xres = X
+    for i in range(1, grado):
+        auxX = np.power(X, i+1)
+        Xres = np.column_stack((Xres, auxX))   
+    return Xres
+
+    # print (Xres)
+def normaliza(X, mu=None, sigma=None):
+    # Nos pasan mu y sigma existentes
+    if(mu is None or sigma is None):
+        mu = np.mean(X, axis=0)
+        sigma = np.std(X, axis=0)
+
+    # Calculamos el valor normalizado
+    X = (X - mu) / sigma
+    return X, mu, sigma
 
 def Ejercicio1():
     #Leemos los valores de la matriz de datos y los guardamos
@@ -143,6 +162,59 @@ def Ejercicio2():
     plt.plot(range(0,m), errorValidation, 'y', label='Validación')
     plt.legend()
     plt.show()
-# Ejercicio1()
-Ejercicio2()
 
+def plotFit(min_x, max_x, mu, sigma, theta, p):
+
+    x = np.array(np.arange(min_x - 15, max_x + 25, 0.05))
+
+    # Map the X values.
+    X_poly = generaDatos(x, p)
+    X_poly = X_poly - mu
+    X_poly = X_poly / sigma
+
+    # Add ones.
+    X_poly = np.insert(X_poly, 0, 1, axis=1)
+
+    # Plot
+    plt.plot(x, np.dot(X_poly, theta), '--')
+
+def Ejercicio3():
+    datos = io.loadmat("ex5data1.mat")
+    trainingX, trainingY = datos ["X"], datos ["y"]
+    validationX, validationY = datos ["Xval"], datos ["yval"]
+    testX, testY = datos ["Xtest"], datos ["ytest"]
+
+    print(trainingX)
+    newX = generaDatos(trainingX, 8)
+    normX, muX, sigmaX = normaliza(newX)
+
+    m = normX.shape[0]
+    unosEntreno = np.ones((m, 1))
+    entrenoUnosX = np.hstack((unosEntreno, normX))
+
+    theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY,0)
+
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Cambio nivel agua (X)')
+    plt.ylabel('Derrame de agua (Y)')
+    plt.title('Figura 4: Regrsión polinomial ($\lambda$ = 0)')
+    plt.plot(trainingX, trainingY, 'rx')
+    plotFit(min(trainingX), max(trainingX), muX, sigmaX, theta, 8)
+    plt.show()
+
+
+
+
+    errorEntreneo, errorVal = curvaAprendizaje()
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Number of training examples')
+    plt.ylabel('Error')
+    plt.title('Figure 5: Polynomial learning curve, $\lambda$ = 0')
+    plt.plot(range(1,m+1), error_train, 'b', label='Train')
+    plt.plot(range(1,m+1), error_val, 'g', label='Cross Validation')
+    plt.legend()
+
+
+# Ejercicio1()
+# Ejercicio2()
+Ejercicio3()

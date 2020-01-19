@@ -63,7 +63,7 @@ def LoadFlowerImages(flowerType):
         FLOWER_COUNT[flowerType] += 1 #Añadimos una flor al recuento
         
 
-#Regresión logística
+# Regresión logística multiclase #
 def LogisticRegressionClassifier(lamda):
     
     # Necesitamos usar arrays de numpy
@@ -83,7 +83,7 @@ def LogisticRegressionClassifier(lamda):
 
 
 
-#De momento lo estamos haciendo en escala de grises
+# Red neuronal de 2 capas #
 def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
 
     # Necesitamos usar arrays de numpy
@@ -116,7 +116,7 @@ def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
     porcentaje = calcula_porcentaje(y, h, 3)
     print("La red tiene una precisión del ",  porcentaje, " %")
 
-#SVM
+# Support Vector Machines #
 def SVMClassifier():
     print("Claro que sí guapi")
 

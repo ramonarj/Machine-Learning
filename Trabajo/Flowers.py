@@ -1,33 +1,42 @@
 ## Ramón Arjona Quiñones
 ## Celia Castaños Bornaechea
+
+# numpy #
 import numpy as np
+# matplotlib #
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+# opencv #
 import cv2
+# sistema operativo #
 import os
+# barra de progreso #
 from tqdm import tqdm
+# sklearn #
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.model_selection import train_test_split
+# nuestro #
+from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot
 
-from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, sigmoid, hMatrix, oneVsAll
-
+#Atributos
 IMG_SIZE = 32 #Ponerlo a 32 o 64
 RES_PATH = 'flowers/'
 FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 FLOWER_COUNT = [0, 0, 0, 0, 0] #Se rellena solo
 
 
-X = [] 
-Y = []
+# DATOS
+X = []
+y = []
 onehotY = []
 
-'''
-    División de las imágenes:
-    - 60% entrenamiento
-    - 20%validación
-    - 20% test
-'''
+# PORCENTAJES PARA DIVIDIR EL DATASET
+TRAIN_FRACTION = 0.6
+VAL_FRACTION = 0.2
+TEST_FRACTION = 0.2
 
+##TODO: leer las imágenes en color, porque si no nos vamos a comer un mojón de precisión
 
 def LoadAllImages():
     '''
@@ -60,84 +69,91 @@ def LoadFlowerImages(flowerType):
                 row.append(0)
      
         X.append(np.array(new_array / 255).ravel()) #Añade la imagen a los casos de entrenamiento
-        Y.append(flowerType)
+        y.append(flowerType)
         onehotY.append(row) #Pone en la posición correspondiente de la matriz salida qué flor es 
         FLOWER_COUNT[flowerType] += 1 #Añadimos una flor al recuento
 
-
-def calcula_porcentaje_Y(Y, Y2, digitsNo: int):
+def DivideSets(X, y):
     '''
-    Calcula el porcentaje de aciertos 
+    Divide el dataset en 3 sets de entrenamiento, validación y test
     '''
-    m = Y.shape[0]
+    #Dividimos en entrenamiento / test (80% - 20%)
+    X_train, X_test, y_train, y_test = train_test_split(np.asarray(X), np.asarray(y), test_size=0.2, random_state=42)
+    #Volvemos a dividir en entrenamiento / validación, para tener un total de 60% (train), 20% (val), 20% (test)
+    X_train, X_val, y_train, y_val = train_test_split(np.asarray(X_train), np.asarray(y_train), test_size=0.25, random_state=42)
 
-    # Vemos cuántos de ellos coinciden con Y 
-    coinciden = ( Y== Y2 )
-    aciertos = np.sum(coinciden)
-
-    # Porcentaje sobre el total de ejemplos redondeado
-    return round((aciertos / m) * 100, digitsNo)
+    #Devolvemos una tupla con los conjuntos troceados
+    return [np.asarray(X_train), np.asarray(y_train), np.asarray(X_val), np.asarray(y_val), np.asarray(X_test), np.asarray(y_test)]
         
 
 # Regresión logística multiclase #
-def LogisticRegressionClassifier(lamda):
-    
-    # Necesitamos usar arrays de numpy
-    nX = np.asarray(X)
-    y = np.asarray(Y)
-
+def LogisticRegressionClassifier(datasets:tuple, lamda):
+    '''
+    Clasificador por regresión logística
+    '''
     # Atributos
-    m = nX.shape[0]
-    unosX = np.hstack([np.ones([m, 1]), nX])
     num_etiquetas = len(FLOWER_NAMES)
+    X_train = datasets[0]
+    y_train = datasets[1]
+    X_test = datasets[4]
+    y_test = datasets[5]
 
-    # Resolvemos el one vs All 
-    thetas = oneVsAll(unosX, y, num_etiquetas, lamda)
+    # Resolvemos el one vs All con el conjunto de entrenamiento
+    m = X_train.shape[0]
+    unosX = np.hstack([np.ones([m, 1]), X_train])
+    thetas = oneVsAll(unosX, np.asarray(y_train), num_etiquetas, lamda)
+
+    # Vemos su precisión sobre el conjunto de tests
+    m = X_test.shape[0]
+    unosX = np.hstack([np.ones([m, 1]), X_test])
     z = sigmoid(hMatrix(unosX, thetas))
 
-    print("El OneVsAll tiene una precisión del ", calcula_porcentaje(y, z, 4), "%")
-
+    print("El OneVsAll tiene una precisión del ", calcula_porcentaje(y_test, z, 4), "%")
 
 
 # Red neuronal de 2 capas #
-def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
-
-    # Necesitamos usar arrays de numpy
-    nX = np.asarray(X)
-    nY = np.asarray(onehotY)
-    y = np.asarray(Y)
-
-    m = nX.shape[0]
-
-
-    # PRUEBA INI - carga imagen y la muestra
-    # img=mpimg.imread(RES_PATH+FLOWER_NAMES[0])
-    # imgplot = plt.imshow(img)
-    # plt.show()
-
-    # 2. Montamos la red neuronal
+def NeutralNetworkClassifier(datasets:tuple, lamda:float, num_ocultas:int, num_iter:int):
+    '''
+    Clasificador por red neuronal de 2 capas 
+    Recibe el número de ocultas, el término de regularización 
+    y las iteraciones máximas en el descenso de gradiente
+    '''
+    # 1. Montamos la red neuronal
     # Atributos
     num_entradas = IMG_SIZE * IMG_SIZE # 1 por cada píxel
     # num_ocultas = nos la pasan como parámetro
     num_etiquetas = len(FLOWER_NAMES) # 5
 
-    # La entrenamos y cogemos los pesos óptimos (es el código de la Práctica 4)
-    theta1, theta2 = trainNeutralNetwork(num_entradas, num_ocultas, num_etiquetas, nX, nY, lamda, num_iter)
+    #Datasets
+    X_train = datasets[0]
+    y_train_onehot = makeOneHot(datasets[1], num_etiquetas)
+    X_test = datasets[4]
+    y_test = datasets[5]
+    m = X_train.shape[0]
 
-    # 3. Con los pesos óptimos obtenidos, hacemos la propagación hacia delante y obtenemos la predicción de la red
-    unosX = np.hstack([np.ones([m, 1]), nX])
+    # La entrenamos y cogemos los pesos óptimos (es el código de la Práctica 4)
+    print("··· Entrenando la red neuronal (puede tardar varios minutos) ··· ")
+    theta1, theta2 = trainNeutralNetwork(num_entradas, num_ocultas, num_etiquetas, X_train, y_train_onehot, lamda, num_iter)
+
+    # 2. Con los pesos óptimos obtenidos, hacemos la propagación hacia delante y obtenemos la predicción de la red
+    print("··· Comprobando la precisión sobre el conjunto de test ··· ")
+    m = X_test.shape[0]
+    unosX = np.hstack([np.ones([m, 1]), X_test])
     a1, z2, a2, z3, h = forward_prop(unosX, theta1, theta2) 
 
     # Sacamos el porcentaje de aciertos
-    porcentaje = calcula_porcentaje(y, h, 3)
+    porcentaje = calcula_porcentaje(y_test, h, 3)
     print("La red tiene una precisión del ",  porcentaje, " %")
 
 # Support Vector Machines #
 def SVMClassifier(kernelType:str, reg:float, sigma:float):
 
-    # Necesitamos usar arrays de numpy
-    nX = np.asarray(X)
-    nY = np.asarray(Y).ravel()
+    #Datasets
+    X_train = datasets[0]
+    y_train = datasets[1]
+    X_test = datasets[4]
+    y_test = datasets[5]
+    
 
     # Hacemos el SVM con kernel especificado
     if(kernelType == 'linear'):
@@ -145,22 +161,30 @@ def SVMClassifier(kernelType:str, reg:float, sigma:float):
     elif (kernelType == 'rbf'):
         svm = SVC(kernel='rbf', C=reg, gamma=1 / (2 * sigma ** 2))
 
-    # Hacemos que se ajuste a los datos
+    # Hacemos que se ajuste a los datos de entrenamiento
+    print("··· Entrenando la SVM (puede tardar varios minutos) ··· ")
     svmMultiClass = OneVsRestClassifier(svm) # de sklearn
-    svmMultiClass.fit(nX, nY)
+    svmMultiClass.fit(X_train, y_train)
 
-    #Vemos el porcentaje de aciertos
-    h = svmMultiClass.predict(nX)
-    porcentaje = calcula_porcentaje_Y(nY, h, 4)
+    # Falta hacer validación
+    
+    #Vemos el porcentaje de aciertos sobre el conjunto de tests
+    print("··· Comprobando la precisión sobre el conjunto de test ··· ")
+    h = svmMultiClass.predict(X_test)
+    porcentaje = calcula_porcentaje_Y(y_test, h, 4)
 
     print("La SVM tiene una precisión del ",  porcentaje, " %")
 
 
 # 1. Cargamos todas las imágenes de sus respectivas carpetas
+print("··· Cargando las imágeners de las flores ··· ")
 LoadAllImages()
-# 2. Regresión logística
-#LogisticRegressionClassifier(0.1)
-# 3. Red neuronal
-#NeutralNetworkClassifier(1, 100, 140)
-# 4. SVM
-SVMClassifier('rbf', 1, 0.1)
+# 2. Dividimos los ejemplos en 3 sets: entrenamiento, validación y test
+datasets = DivideSets(X, y)
+# 3. Regresión logística
+#LogisticRegressionClassifier(datasets, 0.1)
+# 4. Red neuronal
+#NeutralNetworkClassifier(datasets, 1, 100, 140)
+# 5. SVM
+#values = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
+SVMClassifier('rbf', 0.1, 1)

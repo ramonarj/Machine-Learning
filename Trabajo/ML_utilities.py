@@ -84,6 +84,14 @@ def pinta_frontera_recta(X, Y, theta):
     # Pintamos la frontera para z = 0.5
     plt.contour(xx1, xx2, h, [0.5], linewidths=1, colors='b')
 
+def makeOneHot(y, num_etiquetas):
+    m = y.shape[0]
+    y_onehot = np.zeros((m, num_etiquetas)) #5000 x 10
+    for i in range(m):
+        y_onehot[i][y[i]] = 1
+
+    return y_onehot
+
 
 ####    REGRESIÓN LOGÍSTICA     ####
 def regularizedCost(theta, lamda: float, X, Y):

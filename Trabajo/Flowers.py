@@ -6,16 +6,18 @@ import matplotlib.image as mpimg
 import cv2
 import os
 from tqdm import tqdm
+from sklearn.svm import SVC
+from sklearn.multiclass import OneVsRestClassifier
 
 from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, sigmoid, hMatrix, oneVsAll
 
-IMG_SIZE = 20
+IMG_SIZE = 32 #Ponerlo a 32 o 64
 RES_PATH = 'flowers/'
 FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 FLOWER_COUNT = [0, 0, 0, 0, 0] #Se rellena solo
 
 
-X = []
+X = [] 
 Y = []
 onehotY = []
 
@@ -61,6 +63,20 @@ def LoadFlowerImages(flowerType):
         Y.append(flowerType)
         onehotY.append(row) #Pone en la posición correspondiente de la matriz salida qué flor es 
         FLOWER_COUNT[flowerType] += 1 #Añadimos una flor al recuento
+
+
+def calcula_porcentaje_Y(Y, Y2, digitsNo: int):
+    '''
+    Calcula el porcentaje de aciertos 
+    '''
+    m = Y.shape[0]
+
+    # Vemos cuántos de ellos coinciden con Y 
+    coinciden = ( Y== Y2 )
+    aciertos = np.sum(coinciden)
+
+    # Porcentaje sobre el total de ejemplos redondeado
+    return round((aciertos / m) * 100, digitsNo)
         
 
 # Regresión logística multiclase #
@@ -117,8 +133,27 @@ def NeutralNetworkClassifier(lamda:float, num_ocultas:int, num_iter:int):
     print("La red tiene una precisión del ",  porcentaje, " %")
 
 # Support Vector Machines #
-def SVMClassifier():
-    print("Claro que sí guapi")
+def SVMClassifier(kernelType:str, reg:float, sigma:float):
+
+    # Necesitamos usar arrays de numpy
+    nX = np.asarray(X)
+    nY = np.asarray(Y).ravel()
+
+    # Hacemos el SVM con kernel especificado
+    if(kernelType == 'linear'):
+        svm = SVC(kernel='linear', C=reg)
+    elif (kernelType == 'rbf'):
+        svm = SVC(kernel='rbf', C=reg, gamma=1 / (2 * sigma ** 2))
+
+    # Hacemos que se ajuste a los datos
+    svmMultiClass = OneVsRestClassifier(svm)
+    svmMultiClass.fit(nX, nY)
+
+    #Vemos el porcentaje de aciertos
+    h = svmMultiClass.predict(nX)
+    porcentaje = calcula_porcentaje_Y(nY, h, 4)
+
+    print("La SVM tiene una precisión del ",  porcentaje, " %")
 
 
 # 1. Cargamos todas las imágenes de sus respectivas carpetas
@@ -128,4 +163,4 @@ LogisticRegressionClassifier(0.1)
 # 3. Red neuronal
 #NeutralNetworkClassifier(1, 100, 140)
 # 4. SVM
-#SVMClassifier()
+#SVMClassifier('rbf', 1, 0.1)

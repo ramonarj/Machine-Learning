@@ -146,7 +146,7 @@ def SVMClassifier(kernelType:str, reg:float, sigma:float):
         svm = SVC(kernel='rbf', C=reg, gamma=1 / (2 * sigma ** 2))
 
     # Hacemos que se ajuste a los datos
-    svmMultiClass = OneVsRestClassifier(svm)
+    svmMultiClass = OneVsRestClassifier(svm) # de sklearn
     svmMultiClass.fit(nX, nY)
 
     #Vemos el porcentaje de aciertos
@@ -159,8 +159,8 @@ def SVMClassifier(kernelType:str, reg:float, sigma:float):
 # 1. Cargamos todas las imágenes de sus respectivas carpetas
 LoadAllImages()
 # 2. Regresión logística
-LogisticRegressionClassifier(0.1)
+#LogisticRegressionClassifier(0.1)
 # 3. Red neuronal
 #NeutralNetworkClassifier(1, 100, 140)
 # 4. SVM
-#SVMClassifier('rbf', 1, 0.1)
+SVMClassifier('rbf', 1, 0.1)

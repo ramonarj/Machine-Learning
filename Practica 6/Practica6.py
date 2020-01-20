@@ -7,6 +7,7 @@ from scipy.optimize import fmin_tnc
 from scipy.io import loadmat
 from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient, pinta_frontera_recta
 from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
 from process_email import email2TokenList
 from get_vocab_dict import getVocabDict
 
@@ -159,29 +160,7 @@ def Ejercicio3(values):
     plt.savefig("SVMGaussianoOptimo_C=" + str(cOpt) + "_sigma" + str(sigmaOpt) + ".pdf")
     plt.close()
 
-def SpamDetector():
-    #Leemos el correo
-    email_contents = open('spam/0001.txt', 'r', encoding='utf-8', errors='ignore').read()
-    email = email2TokenList(email_contents)
-
-    # Palabras del diccionario
-    vocab = getVocabDict()
-    words = np.zeros([len(vocab)], dtype=int) #Será la X
-
-    # Vemos cuales aparecen en el correo y rellenamos con 1's y 0's
-    for i in range (len(email)):
-        token = email[i]
-        # Comprobamos que no es una palabra incompleta o mal escrita
-        if token in vocab:
-            pos = vocab[token] #Posición que ocupa la palabra en el diccionario
-            words[pos - 1] = 1 #Ponemos esa posición a 1 (empezando en 0)
-
-    #Chequeamos que está bien
-    print(words[1451])
-
-
 values = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
 #Ejericio1(100)
 #Ejericio2(1, 0.1)
 #Ejercicio3(values)
-SpamDetector()

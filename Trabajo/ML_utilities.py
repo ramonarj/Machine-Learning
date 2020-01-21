@@ -213,7 +213,7 @@ def forward_prop(X, theta1, theta2):
     '''
     m = X.shape[0]
 
-    a1 = X
+    a1 = np.hstack([np.ones([m, 1]), X])
     z2 = np.dot(a1, theta1.T)
     a2 = np.hstack([np.ones([m, 1]), sigmoid(z2)])
     z3 = np.dot(a2, theta2.T)
@@ -237,7 +237,6 @@ def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda)
 
     # Número de ejemplos de entrenamiento
     m = X.shape[0]
-    X = np.hstack([np.ones([m, 1]), X]) #Para el término indep.
 
     # 2. Hacemos la propagación hacia delante para obtener las activaciones
     a1, z2, a2, z3, h = forward_prop(X, theta1, theta2) 

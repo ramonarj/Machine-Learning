@@ -191,7 +191,7 @@ def NeutralNetworkClassifier(data:dict, ocultas:tuple, lamdas:tuple, iters:tuple
     bestThetas = []
     bestPorc = 0
 
-    print("··· Entrenando la red neuronal (puede tardar varios minutos) ··· ")
+    print("··· Entrenando la red neuronal (puede tardar varios lustros) ··· ")
     # Barra de progreso 
     pbar = tqdm(total= (len(ocultas) * len(lamdas) * len(iters)))
 
@@ -277,12 +277,12 @@ def SVMClassifier(data:dict, kernelType:str, reg:float, sigma:float):
     print("-> La SVM tiene una precisión del ",  porcentaje, "% <-")
 
 
-def SaveSets(filename:str, datasets:tuple):
+def SaveSets(datasets:tuple):
     '''
     Guarda los datasets ya separados en un archivo de MatLab 
     para no tener que cargar las imágenes todo el rato
     '''
-    savemat(filename, mdict={
+    savemat(DATA_FILENAME, mdict={
         'X_train': datasets[0], 
         'y_train': datasets[1], 
         'X_val': datasets[2], 
@@ -290,19 +290,19 @@ def SaveSets(filename:str, datasets:tuple):
         'X_test': datasets[4],
         'y_test': datasets[5]})
 
-    print("··· Datasets guardados en " + filename +  " ··· ")
+    print("··· Datasets guardados en " + DATA_FILENAME +  " ··· ")
 
 
 # 1a). Cargamos todas las imágenes de sus respectivas carpetas y guardamos los datasets 
 # (solo hay que llamar a esto una vez)
 '''
 datasets = LoadAllImages()
-SaveSets(DATA_FILENAME, datasets)
+SaveSets(datasets)
 '''
 # Parámetros para ajustar los modelos con el set de validación
 lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30] #Para los lambdas de NN y los {C, sigma} de SVM
 ocultas = [50, 100, 200, 400] 
-iters = [70, 150, 300]
+iters = [70, 150, 250]
 
 
 # 1b). Cargamos los datasets ya preparados
@@ -326,3 +326,9 @@ NeutralNetworkClassifier(data, [200], [0.1], [300]) #ocultas = >100, lamda = 0.1
 # 2. Tamaño del conjunto de entrenamiento (BASTANTE)
 # 3. Tamaño de las imágenes (NO TANTO)
 # 4. 
+
+
+#TODO: 
+# 1. Validación en SVM
+# 2. Encontrar los parámetros óptimos (y hacer gráficas)
+# 3. ¿Por qué tan poco acierto?

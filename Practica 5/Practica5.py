@@ -1,5 +1,5 @@
-## Celia Castaños Bornaechea
 ## Ramón Arjona Quiñones
+## Celia Castaños Bornaechea
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,16 +15,18 @@ def h(x, theta):
 
 def coste(X, Y, theta):
     #Calculamos la función de coste
-    m = X.shape[0]
+    m = np.shape(X)[0]
     sumatorio =  np.sum(np.square(np.dot(X, theta) - Y))
     return (1 / (2 * m)) * sumatorio
 
 def costeRegularizado(X, Y, theta, lamda):
 
-    m = X.shape[0]
+    m = np.shape(X)[0]
 
     theta = theta.reshape(-1, Y.shape[1])
+
     term0 = coste(X, Y, theta)
+    
     sumatorio = np.sum(np.square(theta[1:len(theta)]))
     term1 = (lamda / (2 * m)) * sumatorio
     cost = term0 + term1
@@ -56,7 +58,7 @@ def costeYGradiente(X, Y, theta, lamda):
 
 def entrenamientoMinimizarTheta(X, Y, lamda):
     
-    theta = np.zeros(X.shape[1])
+    theta = np.zeros([X.shape[1], 1])
     
     def costFunction(theta):
         return costeYGradiente(X, Y, theta, lamda)
@@ -99,6 +101,7 @@ def generaDatos(X, grado):
     return Xres
 
     # print (Xres)
+
 def normaliza(X, mu=None, sigma=None):
     # Nos pasan mu y sigma existentes
     if(mu is None or sigma is None):
@@ -108,6 +111,41 @@ def normaliza(X, mu=None, sigma=None):
     # Calculamos el valor normalizado
     X = (X - mu) / sigma
     return X, mu, sigma
+
+#Función que ajusta la regresión polinómica
+def ajusta(minX, maxX, mu, sigma, theta, p):
+
+    X = np.array(np.arange(minX - 15, maxX + 25, 0.05))
+
+    #Establece las X
+    Xpolinom = generaDatos(X, p)
+    Xpolinom = Xpolinom - mu
+    Xpolinom = Xpolinom / sigma
+
+    Xpolinom = np.insert(Xpolinom, 0, 1, axis=1)
+
+    plt.plot(X, np.dot(Xpolinom, theta), '-')
+
+def curvaValidacion(X, Y, validationX, validationY):
+    lambdas = np.array([0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10])
+    errorEntreno = np.zeros((len(lambdas), 1))
+    errorValidacion = np.zeros((len(lambdas), 1))
+
+
+    print (validationY.shape[1])
+    
+    # Loop over lambda_vec.
+    for i in range(len(lambdas)):
+        lamda = lambdas[i]
+
+        # Train the model with current lambda_coef.
+        theta = entrenamientoMinimizarTheta(X, Y, lamda)
+
+        # Get the errors with lambda_coef set to 0!!!
+        errorEntreno[i] = costeYGradiente(X, Y, theta, 0)[0]
+        errorValidacion[i] = costeYGradiente(validationX, validationY, theta, 0)[0]
+         
+    return lambdas, errorEntreno, errorValidacion
 
 def Ejercicio1():
     #Leemos los valores de la matriz de datos y los guardamos
@@ -147,7 +185,7 @@ def Ejercicio2():
     unosValidation = np.ones((n, 1))
     validationUnosX = np.hstack((unosValidation, validationX))
     
-
+    print (validationY.shape[0])
     errorEntrenamiento, errorValidation = curvaAprendizaje(entrenoUnosX, trainingY, validationUnosX, validationY, 0)
 
     print('# Training Examples\tTrain Error\tCross Validation Error\n')
@@ -163,58 +201,111 @@ def Ejercicio2():
     plt.legend()
     plt.show()
 
-def plotFit(min_x, max_x, mu, sigma, theta, p):
-
-    x = np.array(np.arange(min_x - 15, max_x + 25, 0.05))
-
-    # Map the X values.
-    X_poly = generaDatos(x, p)
-    X_poly = X_poly - mu
-    X_poly = X_poly / sigma
-
-    # Add ones.
-    X_poly = np.insert(X_poly, 0, 1, axis=1)
-
-    # Plot
-    plt.plot(x, np.dot(X_poly, theta), '--')
-
 def Ejercicio3():
     datos = io.loadmat("ex5data1.mat")
     trainingX, trainingY = datos ["X"], datos ["y"]
     validationX, validationY = datos ["Xval"], datos ["yval"]
     testX, testY = datos ["Xtest"], datos ["ytest"]
 
-    print(trainingX)
+    #Genera nuevos datos de entrada y los normaliza
+    # 1º Casos de entrenamiento
     newX = generaDatos(trainingX, 8)
-    normX, muX, sigmaX = normaliza(newX)
+    normX, mu, sigma = normaliza(newX)
+    
+    #2º Casos de validación
+    newValX = generaDatos(validationX, 8)
+    normValX = newValX - mu
+    normValX = normValX / sigma
 
+    #Añade la columna de unos
     m = normX.shape[0]
     unosEntreno = np.ones((m, 1))
     entrenoUnosX = np.hstack((unosEntreno, normX))
 
+    n = normValX.shape[0]
+    unosValidacion = np.ones((n, 1))
+    validacionUnosX = np.hstack((unosValidacion, normValX))
+
+    #Calcula el vector theta que minimiza el error con lambda = 0
     theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY,0)
 
+    #Muestra la curva que se genera
+    # plt.figure(figsize=(8, 6))
+    # plt.xlabel('Cambio nivel agua (X)')
+    # plt.ylabel('Derrame de agua (Y)')
+    # plt.title('Figura 4: Regresión polinomial ($\lambda$ = 0)')
+    # plt.plot(trainingX, trainingY, 'rx')
+    # ajusta(min(trainingX), max(trainingX), mu, sigma, theta, 8)
+    # plt.show()
+
+
+
+    #Curvas de aprendizaje
+    errorEntreno, errorValidacion = curvaAprendizaje(entrenoUnosX, trainingY, validacionUnosX, validationY, 100)
     plt.figure(figsize=(8, 6))
-    plt.xlabel('Cambio nivel agua (X)')
-    plt.ylabel('Derrame de agua (Y)')
-    plt.title('Figura 4: Regrsión polinomial ($\lambda$ = 0)')
-    plt.plot(trainingX, trainingY, 'rx')
-    plotFit(min(trainingX), max(trainingX), muX, sigmaX, theta, 8)
+    plt.xlabel('Número de casos de entrenamiento')
+    plt.ylabel('Error')
+    plt.title('Figure 5: Curva de aprendizaje para regresión lineal ($\lambda$ = 100)')
+    plt.plot(range(1,m+1), errorEntreno, 'b', label='Entrenamiento')
+    plt.plot(range(1,m+1), errorValidacion, 'y', label='Validación')
+    plt.legend()
     plt.show()
 
+def Ejercicio4():
+    datos = io.loadmat("ex5data1.mat")
+    trainingX, trainingY = datos ["X"], datos ["y"]
+    validationX, validationY = datos ["Xval"], datos ["yval"]
+    testX, testY = datos ["Xtest"], datos ["ytest"]
 
+    #Genera nuevos datos de entrada y los normaliza
+    # 1º Casos de entrenamiento
+    newX = generaDatos(trainingX, 8)
+    normX, mu, sigma = normaliza(newX)
+    
+    #2º Casos de validación
+    newValX = generaDatos(validationX, 8)
+    normValX = newValX - mu
+    normValX = normValX / sigma
+    
+    #3º Casos de test
+    newTestX = generaDatos(testX, 8)
+    normTestX = newTestX - mu
+    normTestX = normTestX / sigma
 
+    #Añade la columna de unos
+    m = normX.shape[0]
+    unosEntreno = np.ones((m, 1))
+    entrenoUnosX = np.hstack((unosEntreno, normX))
 
-    errorEntreneo, errorVal = curvaAprendizaje()
-    plt.figure(figsize=(8, 6))
-    plt.xlabel('Number of training examples')
-    plt.ylabel('Error')
-    plt.title('Figure 5: Polynomial learning curve, $\lambda$ = 0')
-    plt.plot(range(1,m+1), error_train, 'b', label='Train')
-    plt.plot(range(1,m+1), error_val, 'g', label='Cross Validation')
-    plt.legend()
+    n = normValX.shape[0]
+    unosValidacion = np.ones((n, 1))
+    validacionUnosX = np.hstack((unosValidacion, normValX))
 
+    o = normTestX.shape[0]
+    unosTest = np.ones((o, 1))
+    testUnosX = np.hstack((unosTest, normTestX))
 
+    #Calcula el vector theta que minimiza el error con lambda = 0
+    # theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY,0)
+    print (trainingY.shape)
+    print (validationY.shape)
+    lambdas, errorEntreno, errorValidacion = curvaValidacion(entrenoUnosX, trainingY, validacionUnosX, validationY)
+
+    
+    # plt.figure(figsize=(8, 6))
+    # plt.xlabel('$\lambda$')
+    # plt.ylabel('Error')
+    # plt.title('Figura 6: Selección del parámetro $\lambda$')
+    # plt.plot(lambdas, errorEntreno, 'b', label='Entrenamiento')
+    # plt.plot(lambdas, errorValidacion, 'y', label='Validación')
+    # plt.legend()
+    # plt.show()
+
+    theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY, 3)
+
+    errorTest = costeYGradiente(testUnosX, testY, theta, 0)[0]
+    print("Error de los valores de Test para el mejo lambda: {0:.4f}".format(errorTest))
 # Ejercicio1()
 # Ejercicio2()
-Ejercicio3()
+# Ejercicio3()
+Ejercicio4()

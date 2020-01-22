@@ -23,7 +23,7 @@ from tqdm import trange
 from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot
 
 # RECURSOS
-IMG_SIZE = 64 #Ponerlo a 32 o 64 (el de 64x64 pesa 400MB lol)
+IMG_SIZE = 20 # Con esto parece que es suficiente (no hay diferencia con subirlo a 32 o 64, y como tenemos muchos datos, nos vale)
 RES_PATH = 'flowers/'
 FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 FLOWER_COUNT = [0, 0, 0, 0, 0] #Se rellena solo
@@ -34,13 +34,12 @@ y = []
 
 # PORCENTAJES PARA DIVIDIR EL DATASET (60-20-20)
 TRAIN_FRACTION = 0.6
-VAL_FRACTION = 0.2
-TEST_FRACTION = 0.2
+VAL_FRACTION = 0.2 
+TEST_FRACTION = 0.2 
 
 # Para cargar y guardar matrices de datos
-SIZE_EXT = "_" + str(IMG_SIZE) + "x" + str(IMG_SIZE) + ".mat"
-DATA_FILENAME = "flowersData" + SIZE_EXT
-WEIGHTS_NAMES = ["OneVsAllWeights" + SIZE_EXT, "NetworkWeights" + SIZE_EXT]
+DATA_FILENAME = "flowersData.mat"
+WEIGHTS_NAMES = ["OneVsAllWeights.mat", "NetworkWeights.mat"]
 
 def LoadAllImages():
     '''
@@ -315,7 +314,7 @@ y_test = data['y_test'].ravel()
 #LogisticRegressionClassifier(data, [100]) #lamda óptimo = 100
 #TestLogisticRegression(X_test, y_test)
 
-NeutralNetworkClassifier(data, [200], [0.1], [300]) #ocultas = >100, lamda = 0.1, iters = 300
+NeutralNetworkClassifier(data, [25, 50, 100], lamdas, [70, 150]) #ocultas = 100, lamda = 0.1, iters = 140 -> 47%
 #TestNeutralNetwork(X_test, y_test)
 
 #SVMClassifier(data, 'rbf', lamdas)
@@ -332,3 +331,4 @@ NeutralNetworkClassifier(data, [200], [0.1], [300]) #ocultas = >100, lamda = 0.1
 # 1. Validación en SVM
 # 2. Encontrar los parámetros óptimos (y hacer gráficas)
 # 3. ¿Por qué tan poco acierto?
+# 4. Usar optimize en vez de fmin_tnc en el OneVsAll para poder elegir el número de iteraciones

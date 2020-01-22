@@ -140,6 +140,10 @@ def oneVsAll(X: np.array, y: np.array, num_etiquetas: int, reg: float):
     '''
     Implementa la regresión lineal multiclase (reg = término de regularización)
     ''' 
+    # Columna de 1's
+    m = X.shape[0]
+    X = np.hstack([np.ones([m, 1]), X])
+
     #Creamos la matriz de thetas
     thetas = np.zeros((num_etiquetas, X.shape[1]))
 

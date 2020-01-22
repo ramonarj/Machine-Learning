@@ -18,28 +18,29 @@ import cv2
 import os
 # tqdm # (para la barra de progreso)
 from tqdm import tqdm
+from tqdm import trange
 # nuestro #
 from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot
 
-#Atributos
-IMG_SIZE = 32 #Ponerlo a 32 o 64
+# RECURSOS
+IMG_SIZE = 64 #Ponerlo a 32 o 64 (el de 64x64 pesa 400MB lol)
 RES_PATH = 'flowers/'
 FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 FLOWER_COUNT = [0, 0, 0, 0, 0] #Se rellena solo
 
-
-# DATOS
+# DATOS CRUDOS (SIN DIVIDIR)
 X = []
 y = []
 
-# PORCENTAJES PARA DIVIDIR EL DATASET (60-20.20)
+# PORCENTAJES PARA DIVIDIR EL DATASET (60-20-20)
 TRAIN_FRACTION = 0.6
 VAL_FRACTION = 0.2
 TEST_FRACTION = 0.2
 
-DATA_FILENAME = "flowersData.mat"
-
-##TODO: leer las imágenes en color, porque si no nos vamos a comer un mojón de precisión
+# Para cargar y guardar matrices de datos
+SIZE_EXT = "_" + str(IMG_SIZE) + "x" + str(IMG_SIZE) + ".mat"
+DATA_FILENAME = "flowersData" + SIZE_EXT
+WEIGHTS_NAMES = ["OneVsAllWeights" + SIZE_EXT, "NetworkWeights" + SIZE_EXT]
 
 def LoadAllImages():
     '''
@@ -90,9 +91,10 @@ def DivideSets(X, y):
         
 
 # Regresión logística multiclase #
-def LogisticRegressionClassifier(data:dict, lamda):
+def LogisticRegressionClassifier(data:dict, lamdas:tuple):
     '''
-    Clasificador por regresión logística
+    Clasificador por regresión logística; entrena el modelo
+    buscando el lamda óptimo y guarda los pesos en un archivo .mat
     '''
     # Atributos
     num_etiquetas = len(FLOWER_NAMES)
@@ -100,29 +102,74 @@ def LogisticRegressionClassifier(data:dict, lamda):
     # Sacamos los conjuntos del diccionario
     X_train = data["X_train"]
     y_train = data["y_train"].ravel()
-    X_test = data["X_test"]
-    y_test = data["y_test"].ravel()
+    X_val = data["X_val"]
+    y_val = data["y_val"].ravel()
 
-    # Resolvemos el one vs All con el conjunto de entrenamiento
+    # Resolvemos el one vs All
+    bestLamda = lamdas[0]
+    bestPorc = 0
+    bestThetas = np.zeros((num_etiquetas, X_train.shape[1] + 1))
+
+    # Encontramos el mejor valor de lamda usando el conjunto de validación
     print("··· Haciendo el descenso de gradiente ··· ")
-    m = X_train.shape[0]
-    unosX = np.hstack([np.ones([m, 1]), X_train])
-    thetas = oneVsAll(unosX, np.asarray(y_train), num_etiquetas, lamda)
+    for i in range(len(lamdas)):
+        # 1. Primero entrenamos el modelo
+        thetas = oneVsAll(X_train, y_train, num_etiquetas, lamdas[i])
 
-    # Vemos su precisión sobre el conjunto de tests
+        # 2. Luego vemos su precisión sobre el conjunto de validación
+        m = X_val.shape[0]
+        unosX = np.hstack([np.ones([m, 1]), X_val])
+        z = sigmoid(hMatrix(unosX, thetas))
+        porc = calcula_porcentaje(y_val, z, 4)
+
+        # 3. Actualizamos si es mejor con este lamda
+        if(porc > bestPorc):
+            bestLamda = lamdas[i]
+            bestPorc = porc
+            bestThetas = thetas
+
+    # Nos guardamos los pesos óptimos
+    print("··· Pesos guardados guardados en " + WEIGHTS_NAMES[0] + " ··· ")
+    savemat(WEIGHTS_NAMES[0], mdict={
+        'Theta1': bestThetas[0], 
+        'Theta2': bestThetas[1],
+        'Theta3': bestThetas[2],
+        'Theta4': bestThetas[3],
+        'Theta5': bestThetas[4],
+    })
+
+    # Log
+    print("-> El OneVsAll tiene una precisión sobre validación del " + str(bestPorc) + "% con lamda = " + str(bestLamda) + " <-")
+
+def TestLogisticRegression(X_test, y_test):
+    '''
+    Prueba el clasificador logístico sobre el conjunto de tests,
+    cogiendo los pesos ya entrenados.
+    '''
+    # Cargamos los thetas óptimos del archivo (son 5, uno por cada flor)
+    weights = loadmat(WEIGHTS_NAMES[0])
+    num_etiquetas = 5 #TODO: cambiarlo
+    thetaOpt = np.zeros((num_etiquetas, X_test.shape[1] + 1))
+    for i in range(num_etiquetas):
+        thetaOpt[i] = weights['Theta' + str(i+1)]
+
+    # Comprobamos la efectividad
+    print("··· Comprobando la precisión sobre el conjunto de test ··· ")
     m = X_test.shape[0]
     unosX = np.hstack([np.ones([m, 1]), X_test])
-    z = sigmoid(hMatrix(unosX, thetas))
+    z = sigmoid(hMatrix(unosX, thetaOpt))
+    porc = calcula_porcentaje(y_test, z, 4)
 
-    print("-> El OneVsAll tiene una precisión del ", calcula_porcentaje(y_test, z, 4), "% <-")
+    # Log
+    print("-> El OneVsAll tiene una precisión sobre test del " + str(porc) + "% <-")
 
 
 # Red neuronal de 2 capas #
-def NeutralNetworkClassifier(data:dict, lamda:float, num_ocultas:int, num_iter:int):
+def NeutralNetworkClassifier(data:dict, ocultas:tuple, lamdas:tuple, iters:tuple):
     '''
     Clasificador por red neuronal de 2 capas 
-    Recibe el número de ocultas, el término de regularización 
-    y las iteraciones máximas en el descenso de gradiente
+    Recibe el término de regularización, el número de capas ocultas 
+    y las iteraciones máximas para el descenso de gradiente
     '''
     # 1. Montamos la red neuronal
     # Atributos
@@ -133,13 +180,65 @@ def NeutralNetworkClassifier(data:dict, lamda:float, num_ocultas:int, num_iter:i
     # Sacamos los datos del diccionario
     X_train = data["X_train"]
     y_train_onehot = makeOneHot(data["y_train"].ravel(), num_etiquetas)
-    X_test = data["X_test"]
-    y_test = data["y_test"].ravel()
+    X_val = data["X_val"]
+    y_val = data["y_val"].ravel()
     m = X_train.shape[0]
 
-    # La entrenamos y cogemos los pesos óptimos (es el código de la Práctica 4)
+    # Mejores parámetros para la red
+    bestOcultas = ocultas[0]
+    bestLamda = lamdas[0]
+    bestIters = iters[0]
+    bestThetas = []
+    bestPorc = 0
+
     print("··· Entrenando la red neuronal (puede tardar varios minutos) ··· ")
-    theta1, theta2 = trainNeutralNetwork(num_entradas, num_ocultas, num_etiquetas, X_train, y_train_onehot, lamda, num_iter)
+    # Barra de progreso 
+    pbar = tqdm(total= (len(ocultas) * len(lamdas) * len(iters)))
+
+    # Probamos todas las combinaciones de valores que nos pasan (TARDA UN HUEVO)
+    for i in range (len(ocultas)):
+        for j in range (len(lamdas)):
+            for k in range(len(iters)):
+                print(" Probando con " + str(ocultas[i]) + " ocultas, lamda = " + str(lamdas[j]) + " y " + str(iters[k]) + " it.")
+                # La entrenamos y cogemos los pesos óptimos (es el código de la Práctica 4)
+                theta1, theta2 = trainNeutralNetwork(num_entradas, ocultas[i], num_etiquetas, X_train, y_train_onehot, lamdas[j], iters[k])
+
+                # 2. Con los pesos obtenidos, hacemos la propagación hacia delante y vemos el porcentaje sobre validación
+                a1, z2, a2, z3, h = forward_prop(X_val, theta1, theta2) 
+                porcentaje = calcula_porcentaje(y_val, h, 3)
+
+                print("* " + str(porcentaje) + "% *")
+
+                # Comprobamos que sea mejor el porcentaje
+                if(porcentaje > bestPorc):
+                    bestPorc = porcentaje
+                    bestOcultas = ocultas[i]
+                    bestLamda = lamdas[j]
+                    bestIters = iters[k]
+                    bestThetas = [theta1, theta2]
+
+                pbar.update(1) #Actualizar el GUI
+
+    # Guardamos los pesos óptimos
+    print("··· Pesos guardados guardados en " + WEIGHTS_NAMES[1] + " ··· ")
+    savemat(WEIGHTS_NAMES[1], mdict={
+        'Theta1': theta1, 
+        'Theta2': theta2})
+
+    # Sacamos el porcentaje de aciertos
+    print("-> La red tiene una precisión sobre validacion del " +  str(bestPorc) +  " % con " + str(bestOcultas) + " capas ocultas, lamda = " + str(bestLamda) + " y " + str(bestIters) + " iteraciones <-")
+
+
+def TestNeutralNetwork(X_test, y_test):
+    '''
+    Prueba la red neuronal sobre el conjunto de tests,
+    cogiendo los pesos ya entrenados.
+    '''
+
+    # Cargamos los pesos óptimos desde la matriz
+    weights = loadmat(WEIGHTS_NAMES[1])
+    theta1 = weights['Theta1']
+    theta2 = weights['Theta2']
 
     # 2. Con los pesos óptimos obtenidos, hacemos la propagación hacia delante y obtenemos la predicción de la red
     print("··· Comprobando la precisión sobre el conjunto de test ··· ")
@@ -148,6 +247,7 @@ def NeutralNetworkClassifier(data:dict, lamda:float, num_ocultas:int, num_iter:i
     # Sacamos el porcentaje de aciertos
     porcentaje = calcula_porcentaje(y_test, h, 3)
     print("-> La red tiene una precisión del ",  porcentaje, " % <-")
+
 
 # Support Vector Machines #
 def SVMClassifier(data:dict, kernelType:str, reg:float, sigma:float):
@@ -176,6 +276,7 @@ def SVMClassifier(data:dict, kernelType:str, reg:float, sigma:float):
 
     print("-> La SVM tiene una precisión del ",  porcentaje, "% <-")
 
+
 def SaveSets(filename:str, datasets:tuple):
     '''
     Guarda los datasets ya separados en un archivo de MatLab 
@@ -198,10 +299,30 @@ def SaveSets(filename:str, datasets:tuple):
 datasets = LoadAllImages()
 SaveSets(DATA_FILENAME, datasets)
 '''
-#values = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30] #Para la validación 
+# Parámetros para ajustar los modelos con el set de validación
+lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30] #Para los lambdas de NN y los {C, sigma} de SVM
+ocultas = [50, 100, 200, 400] 
+iters = [70, 150, 300]
+
+
 # 1b). Cargamos los datasets ya preparados
+
 data = loadmat(DATA_FILENAME)
+X_test = data['X_test']
+y_test = data['y_test'].ravel()
+
 # 2. Llamamos al clasificador que sea
-#LogisticRegressionClassifier(data, 0.1)
-#NeutralNetworkClassifier(data, 1, 25, 70)
-SVMClassifier(data, 'rbf', 3, 1)
+#LogisticRegressionClassifier(data, [100]) #lamda óptimo = 100
+#TestLogisticRegression(X_test, y_test)
+
+NeutralNetworkClassifier(data, [200], [0.1], [300]) #ocultas = >100, lamda = 0.1, iters = 300
+#TestNeutralNetwork(X_test, y_test)
+
+#SVMClassifier(data, 'rbf', lamdas)
+#TestSVMClassifier(X_test, y_test)
+
+#Cosas que afectan al porcentaje de aciertos:
+# 1. Hiperparámetros (lamda, num_ocultas, num_iter, C, sigma)
+# 2. Tamaño del conjunto de entrenamiento (BASTANTE)
+# 3. Tamaño de las imágenes (NO TANTO)
+# 4. 

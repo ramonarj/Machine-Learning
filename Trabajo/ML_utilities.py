@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize, fmin_tnc
 from sklearn.svm import SVC
+from sklearn.multiclass import OneVsRestClassifier
 
 ####    COMÚN   ####
 def h(x, theta):
@@ -318,7 +319,7 @@ def getBestSVMModel(kernelType:str, values:list, Xtrain, ytrain, Xval, yval):
     (C y sigma de entre la lista que se da) que hacen el porcentaje de aciertos mayor
     Tarda bastante en ejecutarse si la lista tiene más de 4 elementos
     '''
-     #Lista de modelos
+    #Lista de modelos
     svm = []
 
     mejor = 0 #El mejor modelo con la validación
@@ -339,6 +340,50 @@ def getBestSVMModel(kernelType:str, values:list, Xtrain, ytrain, Xval, yval):
             #Vemos el porcentaje de aciertos sobre el conjunto de validación
             h = svm[actual].predict(Xval)
             porc = calcula_porcentaje_Y(yval.ravel(), h, 4)
+
+            #Si el porcentaje es mejor que el máximo, actualizamos 
+            if(porc > mejor_porc):
+                mejor = actual
+                mejor_porc = porc
+                cOpt = values[i]
+                sigmaOpt = values[j]
+            
+            actual+=1 #Avanzamos
+
+    #Devolvemos el mejor, junto a los parámetros usados
+    return svm[mejor], cOPt, sigmaOpt
+
+def getBestSVMMultiClass(kernelType:str, values:list, Xtrain, ytrain, Xval, yval):
+    '''
+    A partir del conjunto de datos de validación, encuentra los hiperparámetros
+    (C y sigma de entre la lista que se da) que hacen el porcentaje de aciertos mayor
+    Tarda bastante en ejecutarse si la lista tiene más de 4 elementos
+    '''
+    #Lista de modelos
+    svm = []
+
+    mejor = 0 #El mejor modelo con la validación
+    mejor_porc = 0
+
+    cOPt = values[0]
+    sigmaOpt = values[0]
+
+    #Todas las posibles combinaciones de modelos con los valores dados para C y sigma
+    actual = 0
+    for i in range (len(values)):
+        for j in range (len(values)):
+            print(" Probando con C = " + str(values[i]) + ", sigma = " + str(values[j]))
+            # Hacemos el SVM con kernel gaussiano
+            svm.append(SVC(kernel=kernelType, C=values[i], gamma=1 / (2 * values[j] ** 2)))
+            #Lo entrenamos con el conjunto de entrenamiento
+            svm[actual] = OneVsRestClassifier(svm[actual]) # Lo convertimos en multiclass
+            svm[actual].fit(Xtrain, ytrain)
+
+            #Vemos el porcentaje de aciertos sobre el conjunto de validación
+            h = svm[actual].predict(Xval)
+            porc = calcula_porcentaje_Y(yval.ravel(), h, 4)
+
+            print("* " + str(porc) + "% *")
 
             #Si el porcentaje es mejor que el máximo, actualizamos 
             if(porc > mejor_porc):

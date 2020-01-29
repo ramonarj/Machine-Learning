@@ -14,21 +14,21 @@ def h(x, theta):
     return np.dot(x, theta[np.newaxis].T)
 
 def coste(X, Y, theta):
-    #Calculamos la función de coste
     m = np.shape(X)[0]
     sumatorio =  np.sum(np.square(np.dot(X, theta) - Y))
     return (1 / (2 * m)) * sumatorio
 
 def costeRegularizado(X, Y, theta, lamda):
-
     m = np.shape(X)[0]
 
-    theta = theta.reshape(-1, Y.shape[1])
-
+    #Convierte a theta en un vector de dos dimensiones
+    theta = theta.reshape(-1, Y.shape[1]) 
+    #Calcula el término sin regularizar
     term0 = coste(X, Y, theta)
-    
+    #Calcula el término con regularización
     sumatorio = np.sum(np.square(theta[1:len(theta)]))
     term1 = (lamda / (2 * m)) * sumatorio
+    
     cost = term0 + term1
     return cost
 
@@ -41,11 +41,12 @@ def gradiente(X, Y, theta):
 def gradienteRegularizado(X, Y, theta, lamda):
 
     m = X.shape[0]
+    
+    #Convierte a theta en un vector de dos dimensiones
     theta = theta.reshape(-1, Y.shape[1])
-    # n = theta.shape[0]
-    # # gradReg = np.zeros(n)
-
+    #Calcula el término sin regularizar
     auxGrad = gradiente(X, Y, theta)
+    #Calcula el término con regularización
     gradReg = auxGrad + (lamda / m ) * theta
     
     gradReg[0] = auxGrad[0]

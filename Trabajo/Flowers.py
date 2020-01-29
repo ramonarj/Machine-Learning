@@ -116,6 +116,7 @@ def LogisticRegressionClassifier(data:dict, lamdas:tuple):
     # Encontramos el mejor valor de lamda usando el conjunto de validación
     print("··· Haciendo el descenso de gradiente ··· ")
     for i in range(len(lamdas)):
+        print(" Probando con lamda = " + str(lamdas[i]))
         # 1. Primero entrenamos el modelo
         thetas = oneVsAll(X_train, y_train, num_etiquetas, lamdas[i])
 
@@ -124,6 +125,8 @@ def LogisticRegressionClassifier(data:dict, lamdas:tuple):
         unosX = np.hstack([np.ones([m, 1]), X_val])
         z = sigmoid(hMatrix(unosX, thetas))
         porc = calcula_porcentaje(y_val, z, 4)
+
+        print("* " + str(porc) + "% *")
 
         # 3. Actualizamos si es mejor con este lamda
         if(porc > bestPorc):
@@ -311,13 +314,13 @@ def SaveSets(datasets:tuple):
 
 # 1a). Cargamos todas las imágenes de sus respectivas carpetas y guardamos los datasets 
 # (solo hay que llamar a esto una vez)
-
+'''
 datasets = LoadAllImages()
 SaveSets(datasets)
-
+'''
 # Parámetros para ajustar los modelos con el set de validación
-lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30] #Para los lambdas de NN y los {C, sigma} de SVM
-ocultas = [50, 100, 200, 400] 
+lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]#, 100, 300] # Para los lambdas de NN y los {C, sigma} de SVM
+ocultas = [25, 50, 100] 
 iters = [70, 150, 250]
 
 
@@ -330,13 +333,13 @@ X_train = data['X_train']
 y_train = data['y_train'].ravel()
 
 # 2. Llamamos al clasificador que sea
-#LogisticRegressionClassifier(data, [100]) #lamda óptimo = 100
-#TestLogisticRegression(X_train, y_train)
+#LogisticRegressionClassifier(data, [100]) #lamda = 100 -> 44.5% val. (93% train)
+#TestLogisticRegression(X_test, y_test)
 
-#NeutralNetworkClassifier(data, [50], lamdas, [70]) #ocultas = 100, lamda = 0.1, iters = 140 -> 47%
-#TestNeutralNetwork(X_train, y_train)
+NeutralNetworkClassifier(data, [50], [0.1], [250]) #ocultas = 50, lamda = 0.1, iters = 140 -> 42% val. (90.5% train)
+#TestNeutralNetwork(X_test, y_test)
 
-SVMClassifier(data, 'rbf', [3, 30])
+#SVMClassifier(data, 'rbf', lamdas) # C = 3, sigma = 30 -> 53% val. (98% train)
 #TestSVMClassifier(X_train, y_train)
 
 #Cosas que afectan al porcentaje de aciertos:

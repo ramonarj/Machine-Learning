@@ -267,6 +267,7 @@ def back_prop (nn_params, num_entradas, num_ocultas, num_etiquetas, X, y, lamda)
 
     # 5. Calculamos el coste regularizado
     regCost = reg_network_cost(h, y, lamda, theta1, theta2)
+    print("Coste: " + str(regCost))
     
     # 6. Calculamos el gradiente...
     delta1 = delta1 / m

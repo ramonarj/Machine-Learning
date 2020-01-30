@@ -21,7 +21,7 @@ from tqdm import tqdm
 from tqdm import trange
 # nuestro #
 from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot, getBestSVMMultiClass
-
+# joblib # (para guardar y cargar las SVM)
 from joblib import dump, load
 
 # RECURSOS
@@ -336,21 +336,18 @@ y_train = data['y_train'].ravel()
 #LogisticRegressionClassifier(data, [100]) #lamda = 100 -> 44.5% val. (93% train)
 #TestLogisticRegression(X_test, y_test)
 
-NeutralNetworkClassifier(data, [50], [0.1], [250]) #ocultas = 50, lamda = 0.1, iters = 140 -> 42% val. (90.5% train)
+NeutralNetworkClassifier(data, [25], [1], [210]) #ocultas = 25, lamda = 1, iters = 140 -> 43% test. (93% train)
 #TestNeutralNetwork(X_test, y_test)
 
 #SVMClassifier(data, 'rbf', lamdas) # C = 3, sigma = 30 -> 53% val. (98% train)
-#TestSVMClassifier(X_train, y_train)
+#TestSVMClassifier(X_test, y_test)
 
 #Cosas que afectan al porcentaje de aciertos:
 # 1. Hiperparámetros (lamda, num_ocultas, num_iter, C, sigma)
-# 2. Tamaño del conjunto de entrenamiento (BASTANTE)
-# 3. Tamaño de las imágenes (NO TANTO)
-# 4. 
+# 2. Tamaño del conjunto de entrenamiento 
+# 3. Tamaño de las imágenes 
 
 
 #TODO: 
-# 1. Validación en SVM
-# 2. Encontrar los parámetros óptimos (y hacer gráficas)
-# 3. ¿Por qué tan poco acierto?
-# 4. Usar optimize en vez de fmin_tnc en el OneVsAll para poder elegir el número de iteraciones
+# 1. Encontrar los parámetros óptimos (y hacer gráficas)
+# 2. Usar optimize en vez de fmin_tnc en el OneVsAll para poder elegir el número de iteraciones

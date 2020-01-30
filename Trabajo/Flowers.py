@@ -20,13 +20,16 @@ import os
 from tqdm import tqdm
 from tqdm import trange
 # nuestro #
-from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot
+from ML_utilities import trainNeutralNetwork, forward_prop, calcula_porcentaje, calcula_porcentaje_Y, sigmoid, hMatrix, oneVsAll, makeOneHot, getBestSVMMultiClass
+# joblib # (para guardar y cargar las SVM)
+from joblib import dump, load
 
 # RECURSOS
-IMG_SIZE = 20 # Con esto parece que es suficiente (no hay diferencia con subirlo a 32 o 64, y como tenemos muchos datos, nos vale)
+IMG_SIZE = 64 # Con esto parece que es suficiente (no hay diferencia con subirlo a 32 o 64, y como tenemos muchos datos, nos vale)
 RES_PATH = 'flowers/'
 FLOWER_NAMES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
 FLOWER_COUNT = [0, 0, 0, 0, 0] #Se rellena solo
+SAMPLE_COUNT = 200 #Número de flores de cada tipo
 
 # DATOS CRUDOS (SIN DIVIDIR)
 X = []
@@ -39,7 +42,7 @@ TEST_FRACTION = 0.2
 
 # Para cargar y guardar matrices de datos
 DATA_FILENAME = "flowersData.mat"
-WEIGHTS_NAMES = ["OneVsAllWeights.mat", "NetworkWeights.mat"]
+WEIGHTS_NAMES = ["OneVsAllWeights.mat", "NetworkWeights.mat", "SVM.joblib"]
 
 def LoadAllImages():
     '''
@@ -63,7 +66,8 @@ def LoadFlowerImages(flowerType):
         indice+=FLOWER_COUNT[i]
 
     #Recorre las imágenes de ese directorio
-    for img in tqdm(os.listdir(folder)): 
+    images = os.listdir(folder)[:SAMPLE_COUNT]
+    for img in tqdm(images): 
         # label = assign_label(img,flower_type)
         path = os.path.join(folder,img) #Path de la imagen
         img = cv2.imread(path, cv2.IMREAD_COLOR) #Lee la imagen
@@ -112,6 +116,7 @@ def LogisticRegressionClassifier(data:dict, lamdas:tuple):
     # Encontramos el mejor valor de lamda usando el conjunto de validación
     print("··· Haciendo el descenso de gradiente ··· ")
     for i in range(len(lamdas)):
+        print(" Probando con lamda = " + str(lamdas[i]))
         # 1. Primero entrenamos el modelo
         thetas = oneVsAll(X_train, y_train, num_etiquetas, lamdas[i])
 
@@ -120,6 +125,8 @@ def LogisticRegressionClassifier(data:dict, lamdas:tuple):
         unosX = np.hstack([np.ones([m, 1]), X_val])
         z = sigmoid(hMatrix(unosX, thetas))
         porc = calcula_porcentaje(y_val, z, 4)
+
+        print("* " + str(porc) + "% *")
 
         # 3. Actualizamos si es mejor con este lamda
         if(porc > bestPorc):
@@ -235,6 +242,7 @@ def TestNeutralNetwork(X_test, y_test):
     '''
 
     # Cargamos los pesos óptimos desde la matriz
+    print("··· Pesos guardados guardados en " + WEIGHTS_NAMES[1] + " ··· ")
     weights = loadmat(WEIGHTS_NAMES[1])
     theta1 = weights['Theta1']
     theta2 = weights['Theta2']
@@ -249,32 +257,44 @@ def TestNeutralNetwork(X_test, y_test):
 
 
 # Support Vector Machines #
-def SVMClassifier(data:dict, kernelType:str, reg:float, sigma:float):
+def SVMClassifier(data:dict, kernelType:str, values:list):
 
     # Sacamos los datos del diccionario
     X_train = data["X_train"]
     y_train = data["y_train"].ravel()
-    X_test = data["X_test"]
-    y_test = data["y_test"].ravel()
-    
-    # Hacemos el SVM con kernel especificado
-    if(kernelType == 'linear'):
-        svm = SVC(kernel='linear', C=reg)
-    elif (kernelType == 'rbf'):
-        svm = SVC(kernel='rbf', C=reg, gamma=1 / (2 * sigma ** 2))
+    X_val = data["X_val"]
+    y_val = data["y_val"].ravel()
 
-    # Hacemos que se ajuste a los datos de entrenamiento
+    #Cogemos el mejor modelo
     print("··· Entrenando la SVM (puede tardar varios minutos) ··· ")
-    svmMultiClass = OneVsRestClassifier(svm) # de sklearn
-    svmMultiClass.fit(X_train, y_train)
+    svm, cOpt, sigmaOpt = getBestSVMMultiClass(kernelType, values, X_train, y_train, X_val, y_val)
+
+    #Guardamos la SVM
+    print("··· SVM guardada en " + WEIGHTS_NAMES[2] + " ··· ")
+    dump(svm, WEIGHTS_NAMES[2])
     
+    # Vemos el porcentaje de aciertos sobre el conjunto de tests
+    print("··· Comprobando la precisión sobre el conjunto de validación con C = " + str(cOpt) + ", sigma = " + str(sigmaOpt) + " ··· ")
+    h = svm.predict(X_test)
+    porcentaje = calcula_porcentaje_Y(y_test, h, 4)
+
+    print("-> La SVM tiene una precisión del ",  porcentaje, "% <-")
+
+def TestSVMClassifier(X_test, y_test):
+    '''
+    Prueba la red neuronal sobre el conjunto de tests,
+    cogiendo los pesos ya entrenados.
+    '''
+
+    #Cargamos
+    svmMultiClass = load(WEIGHTS_NAMES[2])
+
     # Vemos el porcentaje de aciertos sobre el conjunto de tests
     print("··· Comprobando la precisión sobre el conjunto de test ··· ")
     h = svmMultiClass.predict(X_test)
     porcentaje = calcula_porcentaje_Y(y_test, h, 4)
 
     print("-> La SVM tiene una precisión del ",  porcentaje, "% <-")
-
 
 def SaveSets(datasets:tuple):
     '''
@@ -299,8 +319,8 @@ datasets = LoadAllImages()
 SaveSets(datasets)
 '''
 # Parámetros para ajustar los modelos con el set de validación
-lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30] #Para los lambdas de NN y los {C, sigma} de SVM
-ocultas = [50, 100, 200, 400] 
+lamdas = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]#, 100, 300] # Para los lambdas de NN y los {C, sigma} de SVM
+ocultas = [25, 50, 100] 
 iters = [70, 150, 250]
 
 
@@ -309,26 +329,25 @@ iters = [70, 150, 250]
 data = loadmat(DATA_FILENAME)
 X_test = data['X_test']
 y_test = data['y_test'].ravel()
+X_train = data['X_train']
+y_train = data['y_train'].ravel()
 
 # 2. Llamamos al clasificador que sea
-#LogisticRegressionClassifier(data, [100]) #lamda óptimo = 100
+#LogisticRegressionClassifier(data, [100]) #lamda = 100 -> 44.5% val. (93% train)
 #TestLogisticRegression(X_test, y_test)
 
-NeutralNetworkClassifier(data, [25, 50, 100], lamdas, [70, 150]) #ocultas = 100, lamda = 0.1, iters = 140 -> 47%
+NeutralNetworkClassifier(data, [25], [1], [210]) #ocultas = 25, lamda = 1, iters = 140 -> 43% test. (93% train)
 #TestNeutralNetwork(X_test, y_test)
 
-#SVMClassifier(data, 'rbf', lamdas)
+#SVMClassifier(data, 'rbf', lamdas) # C = 3, sigma = 30 -> 53% val. (98% train)
 #TestSVMClassifier(X_test, y_test)
 
 #Cosas que afectan al porcentaje de aciertos:
 # 1. Hiperparámetros (lamda, num_ocultas, num_iter, C, sigma)
-# 2. Tamaño del conjunto de entrenamiento (BASTANTE)
-# 3. Tamaño de las imágenes (NO TANTO)
-# 4. 
+# 2. Tamaño del conjunto de entrenamiento 
+# 3. Tamaño de las imágenes 
 
 
 #TODO: 
-# 1. Validación en SVM
-# 2. Encontrar los parámetros óptimos (y hacer gráficas)
-# 3. ¿Por qué tan poco acierto?
-# 4. Usar optimize en vez de fmin_tnc en el OneVsAll para poder elegir el número de iteraciones
+# 1. Encontrar los parámetros óptimos (y hacer gráficas)
+# 2. Usar optimize en vez de fmin_tnc en el OneVsAll para poder elegir el número de iteraciones

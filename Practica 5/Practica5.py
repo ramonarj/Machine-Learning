@@ -172,12 +172,13 @@ def Ejercicio1():
     pintaRecta(trainingX, trainingY, theta)
 
 def Ejercicio2():
+    #Carga de los datos
     datos = io.loadmat("ex5data1.mat")
     trainingX, trainingY = datos ["X"], datos ["y"]
     validationX, validationY = datos ["Xval"], datos ["yval"]
     testX, testY = datos ["Xtest"], datos ["ytest"]
 
-
+    #Añade la columna de unos
     m = trainingX.shape[0]
     unosEntreno = np.ones((m, 1))
     entrenoUnosX = np.hstack((unosEntreno, trainingX))
@@ -186,17 +187,14 @@ def Ejercicio2():
     unosValidation = np.ones((n, 1))
     validationUnosX = np.hstack((unosValidation, validationX))
     
-    print (validationY.shape[0])
+    #Calcula la curva de aprendizaje
     errorEntrenamiento, errorValidation = curvaAprendizaje(entrenoUnosX, trainingY, validationUnosX, validationY, 0)
 
-    print('# Training Examples\tTrain Error\tCross Validation Error\n')
-    for i in range(m):
-        print('{}\t\t\t{:f}\t{:f}\n'.format(i+1, float(errorEntrenamiento[i]), float(errorValidation[i])))
 
     plt.figure(figsize=(8, 6))
     plt.xlabel('Ejemplos de entrenamiento')
     plt.ylabel('Errores')
-    plt.title('Figura 3: Curva de aprendizaje de la regresión lineal')
+    plt.title('Curva de aprendizaje de la regresión lineal')
     plt.plot(range(0,m), errorEntrenamiento, 'b', label='Entrenamiento')
     plt.plot(range(0,m), errorValidation, 'y', label='Validación')
     plt.legend()

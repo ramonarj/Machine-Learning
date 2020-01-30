@@ -230,23 +230,22 @@ def Ejercicio3():
     #Calcula el vector theta que minimiza el error con lambda = 0
     theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY,0)
 
-    #Muestra la curva que se genera
-    # plt.figure(figsize=(8, 6))
-    # plt.xlabel('Cambio nivel agua (X)')
-    # plt.ylabel('Derrame de agua (Y)')
-    # plt.title('Figura 4: Regresión polinomial ($\lambda$ = 0)')
-    # plt.plot(trainingX, trainingY, 'rx')
-    # ajusta(min(trainingX), max(trainingX), mu, sigma, theta, 8)
-    # plt.show()
+    # Muestra la curva que se genera
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Cambio nivel agua (X)')
+    plt.ylabel('Derrame de agua (Y)')
+    plt.title('Figura 4: Regresión polinomial ($\lambda$ = 0)')
+    plt.plot(trainingX, trainingY, 'rx')
+    ajusta(min(trainingX), max(trainingX), mu, sigma, theta, 8)
 
 
 
     #Curvas de aprendizaje
-    errorEntreno, errorValidacion = curvaAprendizaje(entrenoUnosX, trainingY, validacionUnosX, validationY, 100)
+    errorEntreno, errorValidacion = curvaAprendizaje(entrenoUnosX, trainingY, validacionUnosX, validationY, 1)
     plt.figure(figsize=(8, 6))
     plt.xlabel('Número de casos de entrenamiento')
     plt.ylabel('Error')
-    plt.title('Figure 5: Curva de aprendizaje para regresión lineal ($\lambda$ = 100)')
+    plt.title('Curva de aprendizaje para regresión lineal ($\lambda$ = 1)')
     plt.plot(range(1,m+1), errorEntreno, 'b', label='Entrenamiento')
     plt.plot(range(1,m+1), errorValidacion, 'y', label='Validación')
     plt.legend()
@@ -293,19 +292,19 @@ def Ejercicio4():
     lambdas, errorEntreno, errorValidacion = curvaValidacion(entrenoUnosX, trainingY, validacionUnosX, validationY)
 
     
-    # plt.figure(figsize=(8, 6))
-    # plt.xlabel('$\lambda$')
-    # plt.ylabel('Error')
-    # plt.title('Figura 6: Selección del parámetro $\lambda$')
-    # plt.plot(lambdas, errorEntreno, 'b', label='Entrenamiento')
-    # plt.plot(lambdas, errorValidacion, 'y', label='Validación')
-    # plt.legend()
-    # plt.show()
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('$\lambda$')
+    plt.ylabel('Error')
+    plt.title('Figura 6: Selección del parámetro $\lambda$')
+    plt.plot(lambdas, errorEntreno, 'b', label='Entrenamiento')
+    plt.plot(lambdas, errorValidacion, 'y', label='Validación')
+    plt.legend()
+    plt.show()
 
     theta = entrenamientoMinimizarTheta(entrenoUnosX, trainingY, 3)
 
     errorTest = costeYGradiente(testUnosX, testY, theta, 0)[0]
-    print("Error de los valores de Test para el mejo lambda: {0:.4f}".format(errorTest))
+    print("Error de los valores de Test para el mejor lambda: {0:.4f}".format(errorTest))
 # Ejercicio1()
 # Ejercicio2()
 # Ejercicio3()

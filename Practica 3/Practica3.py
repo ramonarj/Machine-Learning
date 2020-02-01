@@ -112,5 +112,5 @@ def Ejercicio2():
 
 
 #np.set_printoptions(threshold=sys.maxsize) #Para que escriba todos los valores de los arrays
-#Ejercicio1(0.1)
+# Ejercicio1(0.1)
 Ejercicio2()

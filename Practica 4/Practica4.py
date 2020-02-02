@@ -10,8 +10,6 @@ from ML_utilities import forward_prop, trainNeutralNetwork, calcula_porcentaje
 from displayData import displayData
 from checkNNGradients import checkNNGradients
 
-def ejAuxHelpPls():
-
 
 def Ejercicio1(lamda, num_iter):
     '''
@@ -48,7 +46,12 @@ def Ejercicio1(lamda, num_iter):
 
     # Sacamos el porcentaje de aciertos
     porcentaje = calcula_porcentaje(y, h, 3)
-    print("La red clasificado bien un",  porcentaje, " % de los ejemplos")
+    print("La red clasificado bien un",  porcentaje, " % de los ejemplos, con λ = ", lamda, " y ",  num_iter, " iteraciones")
 
 # lamda = 1, 70 iteraciones
-# Ejercicio1(1, 70)
+Ejercicio1(1, 70)
+Ejercicio1(1, 50)
+Ejercicio1(1, 100)
+Ejercicio1(3, 70)
+Ejercicio1(3, 50)
+Ejercicio1(3, 100)

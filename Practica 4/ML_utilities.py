@@ -101,10 +101,12 @@ def network_cost(H, Y):
     #Variables auxiliares
     m = Y.shape[0]
 
-    # Usamos "multiply" en vez de "dot" para que haga multiplicación elemento a elemento, (no producto escalar)
+    # Usamos "multiply" en vez de "dot" para que haga multiplicación 
+    # elemento a elemento, (no producto escalar)
     # y así luego los sumamos todos en vez de hacer un doble bucle
     ## Coste cuando Y = 1
-    costeUno = np.multiply(Y, np.log(H)).sum() # Suma todos los elementos de la matriz (Y x H)
+    costeUno = np.multiply(Y, np.log(H)).sum() # Suma todos los 
+    #elementos de la matriz (Y x H)
     ## Coste cuando Y = 0
     costeCero = np.multiply((1 - Y), np.log(1 - H)).sum() #etc
 

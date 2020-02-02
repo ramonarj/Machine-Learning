@@ -8,8 +8,8 @@ from scipy.io import loadmat
 from ML_utilities import h, hMatrix, sigmoid, regularizedCost, regularizedGradient, pinta_frontera_recta
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
-from process_email import email2TokenList
-from get_vocab_dict import getVocabDict
+# from process_email import email2TokenList
+# from get_vocab_dict import getVocabDict
 
 
 def muestraDatos(X, y, title):
@@ -163,4 +163,4 @@ def Ejercicio3(values):
 values = [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30]
 #Ejericio1(100)
 #Ejericio2(1, 0.1)
-#Ejercicio3(values)
+Ejercicio3(values)

@@ -10,6 +10,9 @@ from ML_utilities import forward_prop, trainNeutralNetwork, calcula_porcentaje
 from displayData import displayData
 from checkNNGradients import checkNNGradients
 
+def ejAuxHelpPls():
+
+
 def Ejercicio1(lamda, num_iter):
     '''
     Redes neuronales
@@ -48,4 +51,4 @@ def Ejercicio1(lamda, num_iter):
     print("La red clasificado bien un",  porcentaje, " % de los ejemplos")
 
 # lamda = 1, 70 iteraciones
-Ejercicio1(1, 70)
+# Ejercicio1(1, 70)

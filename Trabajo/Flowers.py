@@ -201,7 +201,7 @@ def NeutralNetworkClassifier(data:dict, ocultas:tuple, lamdas:tuple, iters:tuple
     # Barra de progreso 
     pbar = tqdm(total= (len(ocultas) * len(lamdas) * len(iters)))
 
-    # Probamos todas las combinaciones de valores que nos pasan (TARDA UN HUEVO)
+    # Probamos todas las combinaciones de valores que nos pasan (TARDA MUCHO)
     for i in range (len(ocultas)):
         for j in range (len(lamdas)):
             for k in range(len(iters)):
@@ -333,10 +333,10 @@ X_train = data['X_train']
 y_train = data['y_train'].ravel()
 
 # 2. Llamamos al clasificador que sea
-#LogisticRegressionClassifier(data, [100]) #lamda = 100 -> 44.5% val. (93% train)
-#TestLogisticRegression(X_test, y_test)
+LogisticRegressionClassifier(data, [100]) #lamda = 100 -> 44.5% val. (93% train)
+TestLogisticRegression(X_test, y_test)
 
-NeutralNetworkClassifier(data, [25], [1], [210]) #ocultas = 25, lamda = 1, iters = 140 -> 43% test. (93% train)
+# NeutralNetworkClassifier(data, [25], [1], [210]) #ocultas = 25, lamda = 1, iters = 140 -> 43% test. (93% train)
 #TestNeutralNetwork(X_test, y_test)
 
 #SVMClassifier(data, 'rbf', lamdas) # C = 3, sigma = 30 -> 53% val. (98% train)

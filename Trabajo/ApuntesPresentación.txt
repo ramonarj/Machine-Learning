@@ -1,0 +1,19 @@
+	- Objetivo -
+El objetivo de nuestro proyecto es identificar de qué tipo es la flor de cada fotografía. Hay 5 tipos distintos: margarita, girasonl, diente de león, tulipan y rosa.
+	- Dataset -
+El dataset cuenta con un total de 4242 fotografías que de media son unas 800 por cada tipo.
+
+	- Carga -
+En la implementación solamente cargamos 200 por cada tipo para hacerlo más rápido. 
+Utilizamos OpenCV para cargar las imágenes y también para reescalarlas. Esto lo hacemos ya que cada una tiene un tamaño distinto y así lo unificamos.
+
+Recorremos los 5 directorios donde están lás imágenes y leemos 200 de ellas y la reescalamos. Cada vez que leemos una la añadimos a la matriz X y en la misma posición pero en otra matriz, Y, ponemos a 1 la columna correspondiente a ese tipo de flor.
+ 
+Una vez cargadas todas las imágenes las dividimos en 3 conjuntos, 60% para entrenamiento, 20% para validación y el 20% restante para test.
+	- Guardado -
+Finalmente guardamos todos estos datos ya divididos en un archivo .mat. Así no nos es necesario hacer este proceso todo el rato, solamente una primera vez y ya luego podemos trabajar con el .mat.
+
+	- Regresión logística -
+Es regresión logística multiclase ya que hay 5 salidas distintas y por lo tanto realizamos el OneVsAll. 
+
+Entrena buscando el lambda óptimo, si le pasamos una tupla con más de uno. Una vez ha ha hecho los cálculos con todos los lambdas y ha encontrado el óptimo, guarda las matrices de pesos en un archivo para utilizarlas posteriormente.
